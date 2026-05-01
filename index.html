@@ -501,7 +501,6 @@ function updateRunBtn(){runBtn.disabled=!(expectedB64&&actualB64);}
 function fileToBase64(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=()=>j(new Error("Read failed"));rd.readAsDataURL(f);})}
 expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){expectedB64=await fileToBase64(expectedFile.files[0]);expectedName.textContent=expectedFile.files[0].name;expectedZone.classList.add("has-file");}updateRunBtn();});
 actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64=await fileToBase64(actualFile.files[0]);actualName.textContent=actualFile.files[0].name;actualZone.classList.add("has-file");}updateRunBtn();});
-function updateRunBtn(){runBtn.disabled=!(apiKeyInput.value.trim().startsWith("sk-ant-")&&expectedB64&&actualB64);}
 
 // Status
 let statusSteps=[];
