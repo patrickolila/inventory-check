@@ -103,94 +103,67 @@
   }
   .loading-overlay.visible { display: flex; }
 
-  .burning-leaf-container {
+  /* ═══ CARTOON SMOKER CHARACTER ═══ */
+  .smoker-scene {
     position: relative;
-    width: 120px;
-    height: 140px;
+    width: 200px;
+    height: 220px;
   }
 
-  .burning-leaf-svg {
-    width: 120px;
-    height: 120px;
+  /* Character body — silhouette */
+  .character {
     position: absolute;
     bottom: 0;
-    left: 0;
-    filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3));
-    animation: leaf-pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes leaf-pulse {
-    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3)); }
-    50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(34, 197, 94, 0.5)); }
-  }
-
-  /* Fire / ember particles */
-  .ember {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    bottom: 60px;
-    left: 50%;
-    pointer-events: none;
-  }
-
-  @keyframes rise-ember {
-    0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; }
-    30% { opacity: 1; }
-    100% { transform: translateY(-100px) translateX(var(--dx, 20px)) scale(0); opacity: 0; }
-  }
-
-  .ember:nth-child(1) { --dx: -15px; background: #ff6b2b; animation: rise-ember 1.8s ease-out infinite; animation-delay: 0s; left: 45%; }
-  .ember:nth-child(2) { --dx: 20px; background: #ff9500; animation: rise-ember 2.1s ease-out infinite; animation-delay: 0.3s; left: 55%; }
-  .ember:nth-child(3) { --dx: -25px; background: #ffcc00; animation: rise-ember 1.6s ease-out infinite; animation-delay: 0.6s; left: 50%; width: 3px; height: 3px; }
-  .ember:nth-child(4) { --dx: 10px; background: #ff6b2b; animation: rise-ember 2.4s ease-out infinite; animation-delay: 0.9s; left: 48%; }
-  .ember:nth-child(5) { --dx: -10px; background: #ff9500; animation: rise-ember 1.9s ease-out infinite; animation-delay: 1.2s; left: 52%; width: 3px; height: 3px; }
-  .ember:nth-child(6) { --dx: 30px; background: #ffcc00; animation: rise-ember 2.2s ease-out infinite; animation-delay: 0.15s; left: 47%; }
-  .ember:nth-child(7) { --dx: -20px; background: #ff4500; animation: rise-ember 2s ease-out infinite; animation-delay: 0.75s; left: 53%; width: 5px; height: 5px; }
-  .ember:nth-child(8) { --dx: 15px; background: #ff6b2b; animation: rise-ember 1.7s ease-out infinite; animation-delay: 1.05s; left: 49%; }
-
-  /* Glow at the tip */
-  .burn-glow {
-    position: absolute;
-    bottom: 55px;
     left: 50%;
     transform: translateX(-50%);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 107, 43, 0.6) 0%, rgba(255, 149, 0, 0.3) 40%, transparent 70%);
-    animation: glow-pulse 1.5s ease-in-out infinite;
+    animation: char-bob 3s ease-in-out infinite;
   }
-  @keyframes glow-pulse {
-    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
-    50% { transform: translateX(-50%) scale(1.3); opacity: 1; }
+  @keyframes char-bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-4px); }
   }
 
-  /* Smoke wisps */
-  .smoke {
+  /* Smoke clouds rising from the joint */
+  .smoke-cloud {
     position: absolute;
-    bottom: 90px;
-    left: 50%;
-    width: 20px;
-    height: 60px;
+    border-radius: 50%;
+    background: rgba(200, 200, 200, 0.08);
     pointer-events: none;
   }
-  .smoke::before, .smoke::after {
-    content: "";
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: rgba(180, 180, 180, 0.08);
-    animation: smoke-rise 3s ease-out infinite;
-  }
-  .smoke::after { animation-delay: 1.5s; left: 8px; }
+  .smoke-cloud:nth-child(1) { width: 18px; height: 18px; left: 140px; bottom: 160px; animation: cloud-rise 3.5s ease-out infinite; }
+  .smoke-cloud:nth-child(2) { width: 14px; height: 14px; left: 145px; bottom: 155px; animation: cloud-rise 4s ease-out infinite 0.5s; }
+  .smoke-cloud:nth-child(3) { width: 22px; height: 22px; left: 135px; bottom: 158px; animation: cloud-rise 3s ease-out infinite 1s; }
+  .smoke-cloud:nth-child(4) { width: 16px; height: 16px; left: 142px; bottom: 162px; animation: cloud-rise 4.5s ease-out infinite 1.5s; }
+  .smoke-cloud:nth-child(5) { width: 20px; height: 20px; left: 138px; bottom: 156px; animation: cloud-rise 3.8s ease-out infinite 2s; }
+  .smoke-cloud:nth-child(6) { width: 12px; height: 12px; left: 148px; bottom: 160px; animation: cloud-rise 3.2s ease-out infinite 0.8s; }
 
-  @keyframes smoke-rise {
-    0% { transform: translateY(0) scale(1); opacity: 0.15; }
-    50% { transform: translateY(-40px) translateX(10px) scale(2); opacity: 0.08; }
-    100% { transform: translateY(-90px) translateX(-5px) scale(3); opacity: 0; }
+  @keyframes cloud-rise {
+    0% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+    30% { opacity: 0.12; }
+    60% { transform: translate(var(--sx, -10px), -60px) scale(2.5); opacity: 0.06; }
+    100% { transform: translate(var(--sx, -10px), -120px) scale(4); opacity: 0; }
+  }
+  .smoke-cloud:nth-child(1) { --sx: -15px; }
+  .smoke-cloud:nth-child(2) { --sx: 10px; }
+  .smoke-cloud:nth-child(3) { --sx: -25px; }
+  .smoke-cloud:nth-child(4) { --sx: 5px; }
+  .smoke-cloud:nth-child(5) { --sx: -20px; }
+  .smoke-cloud:nth-child(6) { --sx: 15px; }
+
+  /* Joint ember glow */
+  .joint-glow {
+    position: absolute;
+    left: 152px;
+    bottom: 152px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 120, 30, 0.9) 0%, rgba(255, 80, 0, 0.4) 50%, transparent 70%);
+    animation: ember-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes ember-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.6); opacity: 1; }
   }
 
   .loading-text {
@@ -252,6 +225,25 @@
     color: var(--text-muted);
     margin-bottom: 16px;
   }
+
+  /* API Key */
+  .key-row { display: flex; gap: 10px; align-items: center; }
+  .key-input {
+    flex: 1;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .key-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .key-input::placeholder { color: var(--text-muted); }
+  .key-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .key-status.saved { color: var(--accent); }
 
   /* Upload zones */
   .template-download {
@@ -399,27 +391,65 @@
 <div class="bg-glow"></div>
 <div class="bg-noise"></div>
 
-<!-- ═══ BURNING LEAF LOADING OVERLAY ═══ -->
+<!-- ═══ CARTOON SMOKER LOADING OVERLAY ═══ -->
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="burning-leaf-container">
-    <!-- Embers rising -->
-    <div class="ember"></div><div class="ember"></div><div class="ember"></div><div class="ember"></div>
-    <div class="ember"></div><div class="ember"></div><div class="ember"></div><div class="ember"></div>
-    <!-- Burn glow at tip -->
-    <div class="burn-glow"></div>
-    <!-- Smoke -->
-    <div class="smoke"></div>
-    <!-- The leaf itself -->
-    <svg class="burning-leaf-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="burnGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#22c55e"/>
-          <stop offset="60%" stop-color="#16a34a"/>
-          <stop offset="85%" stop-color="#854d0e"/>
-          <stop offset="100%" stop-color="#ff6b2b"/>
-        </linearGradient>
-      </defs>
-      <path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="url(#burnGrad)"/>
+  <div class="smoker-scene">
+    <!-- Smoke clouds -->
+    <div class="smoke-cloud"></div><div class="smoke-cloud"></div><div class="smoke-cloud"></div>
+    <div class="smoke-cloud"></div><div class="smoke-cloud"></div><div class="smoke-cloud"></div>
+    <!-- Joint ember glow -->
+    <div class="joint-glow"></div>
+    <!-- Character SVG -->
+    <svg class="character" width="180" height="200" viewBox="0 0 180 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- Beanie -->
+      <ellipse cx="90" cy="42" rx="38" ry="18" fill="#16a34a"/>
+      <rect x="52" y="30" width="76" height="20" rx="4" fill="#16a34a"/>
+      <rect x="56" y="26" width="68" height="10" rx="5" fill="#15803d"/>
+      <rect x="52" y="36" width="76" height="3" fill="#22c55e" opacity="0.5"/>
+      <rect x="52" y="42" width="76" height="3" fill="#22c55e" opacity="0.3"/>
+      <!-- Beanie pom-pom -->
+      <circle cx="90" cy="22" r="6" fill="#22c55e"/>
+      <!-- Head -->
+      <ellipse cx="90" cy="65" rx="32" ry="28" fill="#1a1a2e"/>
+      <!-- Sunglasses -->
+      <rect x="62" y="54" width="22" height="14" rx="3" fill="#111" stroke="#333" stroke-width="1.5"/>
+      <rect x="96" y="54" width="22" height="14" rx="3" fill="#111" stroke="#333" stroke-width="1.5"/>
+      <line x1="84" y1="61" x2="96" y2="61" stroke="#333" stroke-width="1.5"/>
+      <!-- Lens shine -->
+      <rect x="65" y="57" width="6" height="3" rx="1" fill="rgba(255,255,255,0.08)"/>
+      <rect x="99" y="57" width="6" height="3" rx="1" fill="rgba(255,255,255,0.08)"/>
+      <!-- Nose -->
+      <ellipse cx="90" cy="72" rx="3" ry="2" fill="#252540"/>
+      <!-- Mouth/smile -->
+      <path d="M80 80 Q85 86 90 84 Q95 82 98 78" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- Joint sticking out of mouth -->
+      <rect x="97" y="76" width="42" height="4" rx="2" fill="#e8d5b0" transform="rotate(-12, 97, 78)"/>
+      <rect x="97" y="76" width="8" height="4" rx="2" fill="#b8a080" transform="rotate(-12, 97, 78)"/>
+      <!-- Joint cherry/ember -->
+      <circle cx="138" cy="72" r="3.5" fill="#ff6b2b" opacity="0.9">
+        <animate attributeName="opacity" values="0.9;0.5;0.9" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="138" cy="72" r="5" fill="none" stroke="#ff6b2b" stroke-width="0.5" opacity="0.3">
+        <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.3;0;0.3" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Hoodie / body -->
+      <path d="M55 92 Q50 100 48 130 L48 180 Q48 190 60 190 L120 190 Q132 190 132 180 L132 130 Q130 100 125 92 Z" fill="#15803d"/>
+      <!-- Hoodie kangaroo pocket -->
+      <rect x="65" y="145" width="50" height="22" rx="8" fill="#128a3e" opacity="0.6"/>
+      <!-- Hood strings -->
+      <line x1="78" y1="92" x2="76" y2="120" stroke="#22c55e" stroke-width="1.5" opacity="0.5"/>
+      <line x1="102" y1="92" x2="104" y2="120" stroke="#22c55e" stroke-width="1.5" opacity="0.5"/>
+      <!-- Leaf logo on hoodie -->
+      <g transform="translate(82, 115) scale(0.15)" opacity="0.4">
+        <path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z" fill="#22c55e"/>
+      </g>
+      <!-- Arms -->
+      <path d="M48 110 Q30 115 28 130 Q26 140 35 142" stroke="#15803d" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M132 110 Q150 115 152 130 Q154 140 145 142" stroke="#15803d" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <!-- Hands -->
+      <circle cx="35" cy="144" r="7" fill="#1a1a2e"/>
+      <circle cx="145" cy="144" r="7" fill="#1a1a2e"/>
     </svg>
   </div>
   <div class="loading-text" id="loadingText">Checking inventory...</div>
@@ -430,6 +460,14 @@
   <div class="header">
     <h1>Inventory Check</h1>
     <p>Upload expected + actual sheets. Get discrepancies back instantly.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">API Key</div>
+    <div class="key-row">
+      <input type="password" class="key-input" id="apiKey" placeholder="sk-ant-api03-..." />
+    </div>
+    <div class="key-status" id="keyStatus"></div>
   </div>
 
   <div class="card">
@@ -489,15 +527,24 @@
 let expectedB64=null,actualB64=null,pass1Result=null;
 const MODEL="claude-opus-4-7";
 const $=id=>document.getElementById(id);
-const API_KEY="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";
-const expectedFile=$("expectedFile"),actualFile=$("actualFile"),
+const apiKeyInput=$("apiKey"),keyStatus=$("keyStatus"),expectedFile=$("expectedFile"),actualFile=$("actualFile"),
   expectedZone=$("expectedZone"),actualZone=$("actualZone"),expectedName=$("expectedName"),actualName=$("actualName"),
   runBtn=$("runBtn"),statusBar=$("statusBar"),confirmBox=$("confirmBox"),confirmDetail=$("confirmDetail"),
   confirmMatch=$("confirmMatch"),btnYes=$("btnYes"),btnNo=$("btnNo"),errorBox=$("errorBox"),results=$("results"),
   resultsSummary=$("resultsSummary"),resultsBody=$("resultsBody"),whatsappPreview=$("whatsappPreview"),
   copyBtn=$("copyBtn"),resetBtn=$("resetBtn"),loadingOverlay=$("loadingOverlay"),loadingText=$("loadingText");
 
-function updateRunBtn(){runBtn.disabled=!(expectedB64&&actualB64);}
+// Key persistence — saved in browser only, never leaves the device
+const savedKey=localStorage.getItem("anthropic_api_key");
+if(savedKey){apiKeyInput.value=savedKey;keyStatus.textContent="Key loaded from browser — never shared, never stored online";keyStatus.className="key-status saved";}
+apiKeyInput.addEventListener("input",()=>{
+  const k=apiKeyInput.value.trim();
+  if(k.startsWith("sk-ant-")){localStorage.setItem("anthropic_api_key",k);keyStatus.textContent="Key saved to this browser only";keyStatus.className="key-status saved";}
+  else{keyStatus.textContent="";keyStatus.className="key-status";}
+  updateRunBtn();
+});
+
+function updateRunBtn(){runBtn.disabled=!(apiKeyInput.value.trim().startsWith("sk-ant-")&&expectedB64&&actualB64);}
 function fileToBase64(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=()=>j(new Error("Read failed"));rd.readAsDataURL(f);})}
 expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){expectedB64=await fileToBase64(expectedFile.files[0]);expectedName.textContent=expectedFile.files[0].name;expectedZone.classList.add("has-file");}updateRunBtn();});
 actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64=await fileToBase64(actualFile.files[0]);actualName.textContent=actualFile.files[0].name;actualZone.classList.add("has-file");}updateRunBtn();});
@@ -549,7 +596,7 @@ function renderResults(report){const s=report.summary||{};const t=s.total_items|
 
 // Main
 runBtn.addEventListener("click",async()=>{
-  const apiKey=API_KEY;if(!expectedB64||!actualB64)return;
+  const apiKey=apiKeyInput.value.trim();if(!apiKey||!expectedB64||!actualB64)return;
   statusSteps=[];statusBar.classList.remove("visible");confirmBox.classList.remove("visible");errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");runBtn.disabled=true;
   try{
     const s1=addStatus("Pass 1: identifying today's column...");
