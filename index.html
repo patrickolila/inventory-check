@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Check</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a05;
+    --surface: rgba(10, 22, 10, 0.85);
+    --surface-2: rgba(18, 35, 18, 0.8);
+    --border: rgba(34, 197, 94, 0.15);
+    --border-hover: rgba(34, 197, 94, 0.35);
+    --text: #d4e8d4;
+    --text-muted: #5a7a5a;
+    --accent: #22c55e;
+    --accent-dim: #16a34a;
+    --accent-glow: rgba(34, 197, 94, 0.25);
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --radius: 12px;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Outfit', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ═══ CANNABIS LEAF BACKGROUND ═══ */
+  .bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .leaf {
+    position: absolute;
+    opacity: 0.04;
+    fill: #22c55e;
+    animation: float-leaf 25s ease-in-out infinite;
+  }
+  .leaf:nth-child(1) { top: 5%; left: 8%; width: 180px; animation-delay: 0s; transform: rotate(15deg); }
+  .leaf:nth-child(2) { top: 15%; right: 5%; width: 220px; animation-delay: -5s; transform: rotate(-20deg); opacity: 0.03; }
+  .leaf:nth-child(3) { top: 40%; left: -3%; width: 160px; animation-delay: -10s; transform: rotate(35deg); }
+  .leaf:nth-child(4) { top: 55%; right: 10%; width: 200px; animation-delay: -15s; transform: rotate(-10deg); opacity: 0.035; }
+  .leaf:nth-child(5) { top: 75%; left: 15%; width: 190px; animation-delay: -8s; transform: rotate(25deg); opacity: 0.025; }
+  .leaf:nth-child(6) { top: 85%; right: -2%; width: 170px; animation-delay: -18s; transform: rotate(-30deg); }
+  .leaf:nth-child(7) { top: 30%; left: 45%; width: 140px; animation-delay: -12s; transform: rotate(50deg); opacity: 0.02; }
+  .leaf:nth-child(8) { top: 65%; left: 60%; width: 150px; animation-delay: -3s; transform: rotate(-45deg); opacity: 0.025; }
+
+  @keyframes float-leaf {
+    0%, 100% { transform: translateY(0) rotate(var(--rot, 15deg)); }
+    25% { transform: translateY(-12px) rotate(calc(var(--rot, 15deg) + 3deg)); }
+    50% { transform: translateY(-5px) rotate(calc(var(--rot, 15deg) - 2deg)); }
+    75% { transform: translateY(-15px) rotate(calc(var(--rot, 15deg) + 4deg)); }
+  }
+
+  /* Radial green glow on the background */
+  .bg-glow {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 70%, rgba(34, 197, 94, 0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 100%, rgba(16, 80, 40, 0.08) 0%, transparent 40%);
+  }
+
+  /* Noise texture overlay */
+  .bg-noise {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  /* ═══ BURNING LEAF LOADING ANIMATION ═══ */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(5, 10, 5, 0.92);
+    backdrop-filter: blur(8px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+  .loading-overlay.visible { display: flex; }
+
+  .burning-leaf-container {
+    position: relative;
+    width: 120px;
+    height: 140px;
+  }
+
+  .burning-leaf-svg {
+    width: 120px;
+    height: 120px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3));
+    animation: leaf-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes leaf-pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(34, 197, 94, 0.3)); }
+    50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(34, 197, 94, 0.5)); }
+  }
+
+  /* Fire / ember particles */
+  .ember {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    bottom: 60px;
+    left: 50%;
+    pointer-events: none;
+  }
+
+  @keyframes rise-ember {
+    0% { transform: translateY(0) translateX(0) scale(1); opacity: 1; }
+    30% { opacity: 1; }
+    100% { transform: translateY(-100px) translateX(var(--dx, 20px)) scale(0); opacity: 0; }
+  }
+
+  .ember:nth-child(1) { --dx: -15px; background: #ff6b2b; animation: rise-ember 1.8s ease-out infinite; animation-delay: 0s; left: 45%; }
+  .ember:nth-child(2) { --dx: 20px; background: #ff9500; animation: rise-ember 2.1s ease-out infinite; animation-delay: 0.3s; left: 55%; }
+  .ember:nth-child(3) { --dx: -25px; background: #ffcc00; animation: rise-ember 1.6s ease-out infinite; animation-delay: 0.6s; left: 50%; width: 3px; height: 3px; }
+  .ember:nth-child(4) { --dx: 10px; background: #ff6b2b; animation: rise-ember 2.4s ease-out infinite; animation-delay: 0.9s; left: 48%; }
+  .ember:nth-child(5) { --dx: -10px; background: #ff9500; animation: rise-ember 1.9s ease-out infinite; animation-delay: 1.2s; left: 52%; width: 3px; height: 3px; }
+  .ember:nth-child(6) { --dx: 30px; background: #ffcc00; animation: rise-ember 2.2s ease-out infinite; animation-delay: 0.15s; left: 47%; }
+  .ember:nth-child(7) { --dx: -20px; background: #ff4500; animation: rise-ember 2s ease-out infinite; animation-delay: 0.75s; left: 53%; width: 5px; height: 5px; }
+  .ember:nth-child(8) { --dx: 15px; background: #ff6b2b; animation: rise-ember 1.7s ease-out infinite; animation-delay: 1.05s; left: 49%; }
+
+  /* Glow at the tip */
+  .burn-glow {
+    position: absolute;
+    bottom: 55px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 107, 43, 0.6) 0%, rgba(255, 149, 0, 0.3) 40%, transparent 70%);
+    animation: glow-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes glow-pulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+    50% { transform: translateX(-50%) scale(1.3); opacity: 1; }
+  }
+
+  /* Smoke wisps */
+  .smoke {
+    position: absolute;
+    bottom: 90px;
+    left: 50%;
+    width: 20px;
+    height: 60px;
+    pointer-events: none;
+  }
+  .smoke::before, .smoke::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(180, 180, 180, 0.08);
+    animation: smoke-rise 3s ease-out infinite;
+  }
+  .smoke::after { animation-delay: 1.5s; left: 8px; }
+
+  @keyframes smoke-rise {
+    0% { transform: translateY(0) scale(1); opacity: 0.15; }
+    50% { transform: translateY(-40px) translateX(10px) scale(2); opacity: 0.08; }
+    100% { transform: translateY(-90px) translateX(-5px) scale(3); opacity: 0; }
+  }
+
+  .loading-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-muted);
+    animation: text-fade 2s ease-in-out infinite;
+  }
+  @keyframes text-fade {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* ═══ MAIN CONTENT ═══ */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+
+  .header {
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, #22c55e 0%, #86efac 50%, #22c55e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p {
+    color: var(--text-muted);
+    font-size: 15px;
+    font-weight: 400;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: var(--border-hover); }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  /* Upload zones */
+  .template-download {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(34, 197, 94, 0.05);
+    transition: all 0.2s;
+  }
+  .download-link:hover {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+  }
+  .download-hint {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    background: rgba(0,0,0,0.15);
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(34, 197, 94, 0.04); }
+  .upload-zone.has-file { border-color: var(--accent); border-style: solid; background: rgba(34, 197, 94, 0.06); }
+  .upload-zone input { display: none; }
+  .upload-label { font-size: 15px; font-weight: 700; display: block; margin-bottom: 4px; }
+  .upload-hint { font-size: 12px; color: var(--text-muted); }
+  .upload-filename { font-family: var(--mono); font-size: 11px; color: var(--accent); margin-top: 10px; word-break: break-all; }
+
+  /* Run button */
+  .run-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.25);
+  }
+  .run-btn:hover { box-shadow: 0 4px 30px rgba(34, 197, 94, 0.4); transform: translateY(-1px); }
+  .run-btn:disabled { background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+
+  /* Status */
+  .status-bar { display: none; margin-bottom: 16px; }
+  .status-bar.visible { display: block; }
+  .status-step { padding: 8px 0; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+  .status-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .status-icon.running { border: 2px solid var(--accent); border-top-color: transparent; animation: spin 0.8s linear infinite; }
+  .status-icon.done { background: var(--accent); color: #000; }
+  .status-icon.error { background: var(--red); color: #fff; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Confirm box */
+  .confirm-box { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; backdrop-filter: blur(12px); }
+  .confirm-box.visible { display: block; }
+  .confirm-box h3 { font-size: 16px; margin-bottom: 12px; font-weight: 700; }
+  .confirm-detail { font-family: var(--mono); font-size: 13px; line-height: 1.8; margin-bottom: 16px; color: var(--text-muted); }
+  .confirm-detail span { color: var(--text); }
+  .confirm-match { color: var(--accent); font-weight: 700; font-size: 14px; margin-bottom: 16px; display: block; }
+  .confirm-btns { display: flex; gap: 10px; }
+  .confirm-btns button { padding: 10px 28px; border-radius: 8px; border: none; font-family: var(--sans); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.15s; }
+  .btn-yes { background: var(--accent); color: #000; }
+  .btn-yes:hover { background: var(--accent-dim); }
+  .btn-no { background: transparent; color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-no:hover { background: var(--surface-2); }
+
+  /* Results */
+  .results { display: none; }
+  .results.visible { display: block; }
+  .results-summary { display: flex; gap: 12px; margin-bottom: 24px; }
+  .stat-card { flex: 1; background: var(--surface-2); border-radius: 10px; padding: 20px; text-align: center; border: 1px solid var(--border); }
+  .stat-value { font-size: 32px; font-weight: 800; font-family: var(--mono); }
+  .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; font-weight: 600; }
+  .stat-card.green .stat-value { color: var(--accent); }
+  .stat-card.red .stat-value { color: var(--red); }
+
+  .disc-section { margin-bottom: 16px; }
+  .disc-category { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .disc-item { display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px; padding: 10px 0; font-size: 14px; border-bottom: 1px solid rgba(34,197,94,0.06); align-items: center; }
+  .disc-name { font-weight: 600; }
+  .disc-num { font-family: var(--mono); font-size: 13px; text-align: right; min-width: 50px; color: var(--text-muted); }
+  .disc-variance { font-family: var(--mono); font-size: 13px; font-weight: 700; min-width: 40px; text-align: right; }
+  .disc-variance.positive { color: var(--accent); }
+  .disc-variance.negative { color: var(--red); }
+
+  .all-match-banner { text-align: center; padding: 48px 20px; font-size: 20px; color: var(--accent); font-weight: 700; }
+
+  .whatsapp-section { margin-top: 24px; }
+  .whatsapp-preview { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 16px; font-family: var(--mono); font-size: 12px; line-height: 1.8; white-space: pre-wrap; color: var(--text-muted); max-height: 200px; overflow-y: auto; margin-bottom: 12px; border: 1px solid var(--border); }
+  .copy-btn { padding: 12px 24px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .copy-btn:hover { background: var(--border); border-color: var(--accent); }
+  .copy-btn.copied { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .error-box { display: none; background: rgba(30,5,5,0.8); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 16px; margin-bottom: 16px; font-size: 14px; color: var(--red); backdrop-filter: blur(8px); }
+  .error-box.visible { display: block; }
+
+  .reset-btn { display: none; margin-top: 24px; padding: 12px 24px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .reset-btn.visible { display: inline-block; }
+  .reset-btn:hover { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ═══ BACKGROUND CANNABIS LEAVES ═══ -->
+<div class="bg-layer">
+  <!-- Leaf SVG repeated at various positions -->
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:15deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:-20deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:35deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:-10deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:25deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:-30deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:50deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+  <svg class="leaf" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg" style="--rot:-45deg"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="#22c55e"/></svg>
+</div>
+<div class="bg-glow"></div>
+<div class="bg-noise"></div>
+
+<!-- ═══ BURNING LEAF LOADING OVERLAY ═══ -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="burning-leaf-container">
+    <!-- Embers rising -->
+    <div class="ember"></div><div class="ember"></div><div class="ember"></div><div class="ember"></div>
+    <div class="ember"></div><div class="ember"></div><div class="ember"></div><div class="ember"></div>
+    <!-- Burn glow at tip -->
+    <div class="burn-glow"></div>
+    <!-- Smoke -->
+    <div class="smoke"></div>
+    <!-- The leaf itself -->
+    <svg class="burning-leaf-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="burnGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#22c55e"/>
+          <stop offset="60%" stop-color="#16a34a"/>
+          <stop offset="85%" stop-color="#854d0e"/>
+          <stop offset="100%" stop-color="#ff6b2b"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 10C50 10 40 30 50 60C60 30 50 10 50 10Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z M50 70C38 72 20 90 30 82C40 74 48 68 50 70Z M50 70C62 72 80 90 70 82C60 74 52 68 50 70Z" fill="url(#burnGrad)"/>
+    </svg>
+  </div>
+  <div class="loading-text" id="loadingText">Checking inventory...</div>
+</div>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<div class="container">
+  <div class="header">
+    <h1>Inventory Check</h1>
+    <p>Upload expected + actual sheets. Get discrepancies back instantly.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Upload Files</div>
+    <div class="template-download">
+      <a href="inventory-sheet.docx" download class="download-link">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 1v9m0 0L5 7m3 3l3-3M2 12v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Download blank actual sheet template (.docx)
+      </a>
+      <span class="download-hint">Print this template and use it for your physical counts. Fill in the dates at the top of each page before starting a new cycle.</span>
+    </div>
+    <div class="upload-grid">
+      <label class="upload-zone" id="expectedZone">
+        <input type="file" accept=".pdf" id="expectedFile" />
+        <span class="upload-label">Expected</span>
+        <span class="upload-hint">WhatsApp PDF</span>
+        <span class="upload-filename" id="expectedName"></span>
+      </label>
+      <label class="upload-zone" id="actualZone">
+        <input type="file" accept=".pdf" id="actualFile" />
+        <span class="upload-label">Actual</span>
+        <span class="upload-hint">Scanned pack sheet</span>
+        <span class="upload-filename" id="actualName"></span>
+      </label>
+    </div>
+  </div>
+
+  <button class="run-btn" id="runBtn" disabled>Run Inventory Check</button>
+
+  <div class="status-bar" id="statusBar"></div>
+  <div class="confirm-box" id="confirmBox">
+    <h3>Pass 1 — Column Identified</h3>
+    <div class="confirm-detail" id="confirmDetail"></div>
+    <span class="confirm-match" id="confirmMatch"></span>
+    <div class="confirm-btns">
+      <button class="btn-yes" id="btnYes">Yes, proceed</button>
+      <button class="btn-no" id="btnNo">No, abort</button>
+    </div>
+  </div>
+  <div class="error-box" id="errorBox"></div>
+  <div class="results" id="results">
+    <div class="card-title">Results</div>
+    <div class="results-summary" id="resultsSummary"></div>
+    <div id="resultsBody"></div>
+    <div class="whatsapp-section">
+      <div class="card-title">WhatsApp Message</div>
+      <div class="whatsapp-preview" id="whatsappPreview"></div>
+      <button class="copy-btn" id="copyBtn">Copy to clipboard</button>
+    </div>
+  </div>
+  <button class="reset-btn" id="resetBtn">Start over</button>
+</div>
+
+<script>
+let expectedB64=null,actualB64=null,pass1Result=null;
+const MODEL="claude-opus-4-7";
+const $=id=>document.getElementById(id);
+const API_KEY="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";
+const expectedFile=$("expectedFile"),actualFile=$("actualFile"),
+  expectedZone=$("expectedZone"),actualZone=$("actualZone"),expectedName=$("expectedName"),actualName=$("actualName"),
+  runBtn=$("runBtn"),statusBar=$("statusBar"),confirmBox=$("confirmBox"),confirmDetail=$("confirmDetail"),
+  confirmMatch=$("confirmMatch"),btnYes=$("btnYes"),btnNo=$("btnNo"),errorBox=$("errorBox"),results=$("results"),
+  resultsSummary=$("resultsSummary"),resultsBody=$("resultsBody"),whatsappPreview=$("whatsappPreview"),
+  copyBtn=$("copyBtn"),resetBtn=$("resetBtn"),loadingOverlay=$("loadingOverlay"),loadingText=$("loadingText");
+
+function updateRunBtn(){runBtn.disabled=!(expectedB64&&actualB64);}
+function fileToBase64(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=()=>j(new Error("Read failed"));rd.readAsDataURL(f);})}
+expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){expectedB64=await fileToBase64(expectedFile.files[0]);expectedName.textContent=expectedFile.files[0].name;expectedZone.classList.add("has-file");}updateRunBtn();});
+actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64=await fileToBase64(actualFile.files[0]);actualName.textContent=actualFile.files[0].name;actualZone.classList.add("has-file");}updateRunBtn();});
+function updateRunBtn(){runBtn.disabled=!(apiKeyInput.value.trim().startsWith("sk-ant-")&&expectedB64&&actualB64);}
+
+// Status
+let statusSteps=[];
+function addStatus(t,s="running"){statusSteps.push({text:t,state:s});renderStatus();return statusSteps.length-1;}
+function updateStatus(i,s){statusSteps[i].state=s;renderStatus();}
+function renderStatus(){statusBar.classList.add("visible");statusBar.innerHTML=statusSteps.map(s=>{let ic="";if(s.state==="running")ic='<div class="status-icon running"></div>';else if(s.state==="done")ic='<div class="status-icon done">✓</div>';else if(s.state==="error")ic='<div class="status-icon error">✕</div>';return`<div class="status-step">${ic}<span>${s.text}</span></div>`;}).join("");}
+function showError(m){errorBox.textContent=m;errorBox.classList.add("visible");}
+
+// Loading overlay
+const loadingMessages=["Checking inventory...","Reading the pack sheet...","Matching items...","Counting discrepancies...","Almost there..."];
+let loadingInterval=null;
+function showLoading(msg){loadingText.textContent=msg||"Checking inventory...";loadingOverlay.classList.add("visible");let i=0;loadingInterval=setInterval(()=>{i=(i+1)%loadingMessages.length;loadingText.textContent=loadingMessages[i];},4000);}
+function hideLoading(){loadingOverlay.classList.remove("visible");if(loadingInterval)clearInterval(loadingInterval);}
+
+// API
+async function callClaude(key,messages,maxTokens=4096){
+  const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages})});
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||`API error ${resp.status}`);}
+  return await resp.json();
+}
+function extractText(r){return r.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();}
+function parseJSON(raw){let c=raw;if(c.startsWith("```")){c=c.replace(/^```json?\s*/i,"").replace(/```\s*$/,"");}try{return JSON.parse(c);}catch{}const f=c.replace(/,(\s*[}\]])/g,"$1");try{return JSON.parse(f);}catch(e){throw new Error("Could not parse response: "+e.message);}}
+
+// Prompts
+const PASS1_PROMPT=`You are looking at PAGE 1 of a multi-page physical inventory pack sheet. The first row contains date headers (one column per day, ~14 days). The leftmost column is the item-name column and is NOT a data column.\n\nAlso attached is the EXPECTED inventory PDF for a single date — read its date.\n\nYour job:\n1. Read the target date from the EXPECTED PDF and normalize it to YYYY-MM-DD.\n2. On page 1 of the actual sheet, look ONLY at the top date-header row. Count the data columns from left to right (do NOT count the item-name column). Find which data-column index (1-based) holds the target date.\n3. Note: dates may be written as just a day number (e.g. "27", "28", "29") or as day/month. Use the sequence to disambiguate.\n\nIf you cannot confidently identify the column, set found=false and explain. Do NOT guess.\n\nRespond ONLY with JSON, no prose, no markdown:\n\n{\n  "expected_date_raw": "string",\n  "target_date": "YYYY-MM-DD",\n  "found": true | false,\n  "column_index": number | null,\n  "total_data_columns": number,\n  "column_header_raw": "string",\n  "all_headers_raw": ["list"],\n  "note": "string"\n}`;
+
+function pass2Prompt(ci,ch,td){return`You are an inventory auditor. You have two inputs:\n\n1. The EXPECTED PDF — a single-date inventory sheet.\n2. The ACTUAL sheet — a multi-page physical pack sheet with ~14 day-columns.\n\nUse data column #${ci} (1-based, NOT counting the item-name column). Header reads: "${ch}". Target date: ${td}. Apply this column on EVERY page.\n\nIMPORTANT RULES:\n- Leftmost column (item names) is NOT a data column.\n- Date header row appears at TOP OF EVERY PAGE. Re-verify column #${ci} on each page.\n- Section headers (HYBRIDS, INDICA, etc.) are categories, not items.\n- Blank cells = null. Handwriting may be ambiguous — note it.\n\nMatch items tolerantly. List unexpected items too.\n\nStatus flags: "match", "short", "over", "missing", "unexpected"\n\nCRITICAL JSON RULES:\n- Valid JSON only. No markdown.\n- Keep notes under 10 words. Empty string if none.\n- No double quotes inside note strings. No trailing commas.\n\nRespond ONLY with JSON:\n\n{\n  "report_date": "${td}",\n  "column_used": { "index": ${ci}, "header_raw": "${ch}" },\n  "items": [\n    {\n      "item": "string",\n      "category": "string",\n      "expected": number_or_null,\n      "actual": number_or_null,\n      "difference": number_or_null,\n      "status": "match" | "short" | "over" | "missing" | "unexpected",\n      "note": "string"\n    }\n  ],\n  "summary": {\n    "total_items": number,\n    "discrepancies": number,\n    "ambiguous": number\n  }\n}`;}
+
+// WhatsApp
+function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\n✅ All ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
+
+// Render
+function renderResults(report){const s=report.summary||{};const t=s.total_items||0,d=s.discrepancies||0,m=t-d;
+  resultsSummary.innerHTML=`<div class="stat-card green"><div class="stat-value">${m}</div><div class="stat-label">Match</div></div><div class="stat-card ${d>0?"red":"green"}"><div class="stat-value">${d}</div><div class="stat-label">Discrepancies</div></div><div class="stat-card"><div class="stat-value">${t}</div><div class="stat-label">Total</div></div>`;
+  const flagged=(report.items||[]).filter(i=>i.status!=="match");
+  if(!flagged.length){resultsBody.innerHTML='<div class="all-match-banner">✅ All items match</div>';}
+  else{const bc={},co=[];for(const i of flagged){const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}let h="";for(const c of co){h+=`<div class="disc-section"><div class="disc-category">${c}</div>`;for(const i of bc[c]){const e=i.expected!=null?i.expected:"—",a=i.actual!=null?i.actual:"—";let v="—",vc="";if(i.expected!=null&&i.actual!=null){const diff=i.actual-i.expected;v=(diff>0?"+":"")+diff;vc=diff>0?"positive":"negative";}h+=`<div class="disc-item"><span class="disc-name">${i.item}</span><span class="disc-num">exp ${e}</span><span class="disc-num">act ${a}</span><span class="disc-variance ${vc}">${v}</span></div>`;}h+="</div>";}resultsBody.innerHTML=h;}
+  const wa=formatWhatsApp(report);whatsappPreview.textContent=wa;
+  copyBtn.onclick=async()=>{await navigator.clipboard.writeText(wa);copyBtn.textContent="Copied!";copyBtn.classList.add("copied");setTimeout(()=>{copyBtn.textContent="Copy to clipboard";copyBtn.classList.remove("copied");},2000);};
+  results.classList.add("visible");resetBtn.classList.add("visible");}
+
+// Main
+runBtn.addEventListener("click",async()=>{
+  const apiKey=API_KEY;if(!expectedB64||!actualB64)return;
+  statusSteps=[];statusBar.classList.remove("visible");confirmBox.classList.remove("visible");errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");runBtn.disabled=true;
+  try{
+    const s1=addStatus("Pass 1: identifying today's column...");
+    showLoading("Reading the expected PDF...");
+    const p1=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED PDF (single-date):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL sheet (look at PAGE 1 only):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:PASS1_PROMPT}]}],1024);
+    pass1Result=parseJSON(extractText(p1));updateStatus(s1,"done");hideLoading();
+    if(!pass1Result.found){showError("Pass 1 failed: "+( pass1Result.note||"could not find date"));updateStatus(s1,"error");runBtn.disabled=false;return;}
+    confirmDetail.innerHTML=`Date from expected PDF: <span>${pass1Result.expected_date_raw} → ${pass1Result.target_date}</span><br>Headers seen: <span>${(pass1Result.all_headers_raw||[]).join(", ")}</span>`;
+    confirmMatch.textContent=`✓ Column #${pass1Result.column_index} of ${pass1Result.total_data_columns} — header reads '${pass1Result.column_header_raw}'`;
+    confirmBox.classList.add("visible");
+    const confirmed=await new Promise(r=>{btnYes.onclick=()=>r(true);btnNo.onclick=()=>r(false);});
+    confirmBox.classList.remove("visible");
+    if(!confirmed){addStatus("Aborted.");runBtn.disabled=false;return;}
+    const s2=addStatus("Pass 2: reading all pages...");
+    showLoading("Matching items across all pages...");
+    const p2=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:pass2Prompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}]}],16384);
+    const report=parseJSON(extractText(p2));updateStatus(s2,"done");hideLoading();
+    renderResults(report);
+  }catch(err){hideLoading();showError(err.message);if(statusSteps.length>0)updateStatus(statusSteps.length-1,"error");}
+  runBtn.disabled=false;
+});
+
+resetBtn.addEventListener("click",()=>{
+  expectedB64=null;actualB64=null;pass1Result=null;expectedFile.value="";actualFile.value="";
+  expectedName.textContent="";actualName.textContent="";expectedZone.classList.remove("has-file");actualZone.classList.remove("has-file");
+  statusSteps=[];statusBar.innerHTML="";statusBar.classList.remove("visible");confirmBox.classList.remove("visible");
+  errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");updateRunBtn();
+});
+</script>
+</body>
+</html>
