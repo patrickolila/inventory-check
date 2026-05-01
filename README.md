@@ -2,7 +2,7 @@
 
 A web app that compares an expected inventory PDF against a physical pack sheet scan and reports discrepancies.
 
-**Live app:** `https://<your-username>.github.io/inventory-check/`
+**Live app:** `https://patrickolila.github.io/inventory-check/`
 
 ## How it works
 
