@@ -517,7 +517,12 @@ function hideLoading(){loadingOverlay.classList.remove("visible");if(loadingInte
 
 // API
 async function callClaude(key,messages,maxTokens=4096){
-  const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages})});
+  let resp;
+  try {
+    resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages})});
+  } catch(netErr) {
+    throw new Error("Network error: " + netErr.message + ". Try disabling ad blockers or browser extensions, or try a different browser (Chrome works best).");
+  }
   if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||`API error ${resp.status}`);}
   return await resp.json();
 }
