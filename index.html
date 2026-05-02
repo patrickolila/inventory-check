@@ -505,7 +505,32 @@ async function callClaude(key,messages,maxTokens=4096){
   return await resp.json();
 }
 function extractText(r){return r.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();}
-function parseJSON(raw){let c=raw;if(c.startsWith("```")){c=c.replace(/^```json?\s*/i,"").replace(/```\s*$/,"");}try{return JSON.parse(c);}catch{}const f=c.replace(/,(\s*[}\]])/g,"$1");try{return JSON.parse(f);}catch(e){throw new Error("Could not parse response: "+e.message);}}
+function parseJSON(raw){
+  let c=raw;
+  // Strip markdown fences
+  if(c.startsWith("```")){c=c.replace(/^```json?\s*/i,"").replace(/```\s*$/,"");}
+  // Try as-is
+  try{return JSON.parse(c);}catch{}
+  // Fix trailing commas
+  let f=c.replace(/,(\s*[}\]])/g,"$1");
+  try{return JSON.parse(f);}catch{}
+  // Fix single quotes used as property delimiters
+  f=f.replace(/'/g,'"');
+  try{return JSON.parse(f);}catch{}
+  // Try to fix truncated JSON by closing open brackets/braces
+  let fixed=f;
+  const opens=(fixed.match(/\[/g)||[]).length;
+  const closes=(fixed.match(/\]/g)||[]).length;
+  const openBraces=(fixed.match(/\{/g)||[]).length;
+  const closeBraces=(fixed.match(/\}/g)||[]).length;
+  // Remove any trailing incomplete property/value
+  fixed=fixed.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"]*$/, "");
+  fixed=fixed.replace(/,\s*$/, "");
+  // Close unclosed structures
+  for(let i=0;i<opens-closes;i++) fixed+="]";
+  for(let i=0;i<openBraces-closeBraces;i++) fixed+="}";
+  try{return JSON.parse(fixed);}catch(e){throw new Error("JSON Parse error: "+e.message);}
+}
 
 const PASS1_PROMPT=`You are looking at PAGE 1 of a multi-page physical inventory pack sheet. The first row contains date headers (one column per day, ~14 days). The leftmost column is the item-name column and is NOT a data column.
 
@@ -602,8 +627,19 @@ runBtn.addEventListener("click",async()=>{
     confirmBox.classList.remove("visible");
     if(!confirmed){addStatus("Aborted.");runBtn.disabled=false;return;}
     const s2=addStatus("Pass 2: checking expected items...");showLoading("Matching items...");
-    const p2=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:pass2Prompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}]}],16384);
-    const report=parseJSON(extractText(p2));updateStatus(s2,"done");hideLoading();renderResults(report);
+    const pass2Content=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:pass2Prompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}];
+    let report=null;
+    for(let attempt=1;attempt<=2;attempt++){
+      try{
+        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],16384);
+        report=parseJSON(extractText(p2));
+        break;
+      }catch(parseErr){
+        if(attempt===1){updateStatus(s2,"running");addStatus("Retrying Pass 2 (JSON issue)...");showLoading("Retrying...");}
+        else{throw parseErr;}
+      }
+    }
+    updateStatus(s2,"done");hideLoading();renderResults(report);
   }catch(err){hideLoading();showError(err.message);if(statusSteps.length>0)updateStatus(statusSteps.length-1,"error");}
   runBtn.disabled=false;
 });
