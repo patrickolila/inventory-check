@@ -226,25 +226,6 @@
     margin-bottom: 16px;
   }
 
-  /* API Key */
-  .key-row { display: flex; gap: 10px; align-items: center; }
-  .key-input {
-    flex: 1;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .key-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-  .key-input::placeholder { color: var(--text-muted); }
-  .key-status { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
-  .key-status.saved { color: var(--accent); }
-
   /* Upload zones */
   .template-download {
     margin-bottom: 20px;
@@ -462,13 +443,8 @@
     <p>Upload expected + actual sheets. Get discrepancies back instantly.</p>
   </div>
 
-  <div class="card">
-    <div class="card-title">API Key</div>
-    <div class="key-row">
-      <input type="password" class="key-input" id="apiKey" placeholder="sk-ant-api03-..." />
-    </div>
-    <div class="key-status" id="keyStatus"></div>
-  </div>
+  <input type="hidden" id="apiKey" />
+  <span id="keyStatus" style="display:none"></span>
 
   <div class="card">
     <div class="card-title">Upload Files</div>
@@ -534,17 +510,28 @@ const apiKeyInput=$("apiKey"),keyStatus=$("keyStatus"),expectedFile=$("expectedF
   resultsSummary=$("resultsSummary"),resultsBody=$("resultsBody"),whatsappPreview=$("whatsappPreview"),
   copyBtn=$("copyBtn"),resetBtn=$("resetBtn"),loadingOverlay=$("loadingOverlay"),loadingText=$("loadingText");
 
-// Key persistence — saved in browser only, never leaves the device
+// Key persistence — URL param on first visit, localStorage thereafter
+const urlParams = new URLSearchParams(window.location.search);
+const urlKey = urlParams.get("key");
+if(urlKey && urlKey.startsWith("sk-ant-")){
+  localStorage.setItem("anthropic_api_key", urlKey);
+  window.history.replaceState({}, "", window.location.pathname);
+}
 const savedKey=localStorage.getItem("anthropic_api_key");
-if(savedKey){apiKeyInput.value=savedKey;keyStatus.textContent="Key loaded from browser — never shared, never stored online";keyStatus.className="key-status saved";}
-apiKeyInput.addEventListener("input",()=>{
-  const k=apiKeyInput.value.trim();
-  if(k.startsWith("sk-ant-")){localStorage.setItem("anthropic_api_key",k);keyStatus.textContent="Key saved to this browser only";keyStatus.className="key-status saved";}
-  else{keyStatus.textContent="";keyStatus.className="key-status";}
-  updateRunBtn();
-});
+if(savedKey){ apiKeyInput.value=savedKey; }
+else {
+  // No key found — show a simple prompt
+  const k = prompt("Enter your Anthropic API key (sk-ant-...).\nThis only needs to be done once — it saves to your browser.");
+  if(k && k.startsWith("sk-ant-")){ localStorage.setItem("anthropic_api_key", k); apiKeyInput.value=k; }
+}
 
-function updateRunBtn(){runBtn.disabled=!(apiKeyInput.value.trim().startsWith("sk-ant-")&&expectedB64&&actualB64);}
+function updateRunBtn(){
+  const hasKey = apiKeyInput.value.trim().startsWith("sk-ant-");
+  runBtn.disabled=!(hasKey && expectedB64 && actualB64);
+  if(!hasKey && expectedB64 && actualB64){
+    showError("No API key found. Ask your team lead for the setup link, or enter a key manually in your browser console: localStorage.setItem('anthropic_api_key','sk-ant-...')");
+  }
+}
 function fileToBase64(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=()=>j(new Error("Read failed"));rd.readAsDataURL(f);})}
 expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){expectedB64=await fileToBase64(expectedFile.files[0]);expectedName.textContent=expectedFile.files[0].name;expectedZone.classList.add("has-file");}updateRunBtn();});
 actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64=await fileToBase64(actualFile.files[0]);actualName.textContent=actualFile.files[0].name;actualZone.classList.add("has-file");}updateRunBtn();});
@@ -579,7 +566,60 @@ function parseJSON(raw){let c=raw;if(c.startsWith("```")){c=c.replace(/^```json?
 // Prompts
 const PASS1_PROMPT=`You are looking at PAGE 1 of a multi-page physical inventory pack sheet. The first row contains date headers (one column per day, ~14 days). The leftmost column is the item-name column and is NOT a data column.\n\nAlso attached is the EXPECTED inventory PDF for a single date — read its date.\n\nYour job:\n1. Read the target date from the EXPECTED PDF and normalize it to YYYY-MM-DD.\n2. On page 1 of the actual sheet, look ONLY at the top date-header row. Count the data columns from left to right (do NOT count the item-name column). Find which data-column index (1-based) holds the target date.\n3. Note: dates may be written as just a day number (e.g. "27", "28", "29") or as day/month. Use the sequence to disambiguate.\n\nIf you cannot confidently identify the column, set found=false and explain. Do NOT guess.\n\nRespond ONLY with JSON, no prose, no markdown:\n\n{\n  "expected_date_raw": "string",\n  "target_date": "YYYY-MM-DD",\n  "found": true | false,\n  "column_index": number | null,\n  "total_data_columns": number,\n  "column_header_raw": "string",\n  "all_headers_raw": ["list"],\n  "note": "string"\n}`;
 
-function pass2Prompt(ci,ch,td){return`You are an inventory auditor. You have two inputs:\n\n1. The EXPECTED PDF — a single-date inventory sheet.\n2. The ACTUAL sheet — a multi-page physical pack sheet with ~14 day-columns.\n\nUse data column #${ci} (1-based, NOT counting the item-name column). Header reads: "${ch}". Target date: ${td}. Apply this column on EVERY page.\n\nIMPORTANT RULES:\n- Leftmost column (item names) is NOT a data column.\n- Date header row appears at TOP OF EVERY PAGE. Re-verify column #${ci} on each page.\n- Section headers (HYBRIDS, INDICA, etc.) are categories, not items.\n- Blank cells = null. Handwriting may be ambiguous — note it.\n\nMatch items tolerantly. List unexpected items too.\n\nStatus flags: "match", "short", "over", "missing", "unexpected"\n\nCRITICAL JSON RULES:\n- Valid JSON only. No markdown.\n- Keep notes under 10 words. Empty string if none.\n- No double quotes inside note strings. No trailing commas.\n\nRespond ONLY with JSON:\n\n{\n  "report_date": "${td}",\n  "column_used": { "index": ${ci}, "header_raw": "${ch}" },\n  "items": [\n    {\n      "item": "string",\n      "category": "string",\n      "expected": number_or_null,\n      "actual": number_or_null,\n      "difference": number_or_null,\n      "status": "match" | "short" | "over" | "missing" | "unexpected",\n      "note": "string"\n    }\n  ],\n  "summary": {\n    "total_items": number,\n    "discrepancies": number,\n    "ambiguous": number\n  }\n}`;}
+function pass2Prompt(ci,ch,td){return`You are an inventory auditor. You have two inputs:
+
+1. The EXPECTED PDF — a single-date inventory sheet listing specific items and their expected quantities.
+2. The ACTUAL sheet — a multi-page physical pack sheet with ~14 day-columns.
+
+Use data column #${ci} (1-based, NOT counting the item-name column). Header reads: "${ch}". Target date: ${td}. Apply this column on EVERY page.
+
+CRITICAL: ONLY check items that appear on the EXPECTED PDF with a quantity. Do NOT list or report items that are on the actual sheet but not on the expected PDF. Do NOT scan every row. Your job is strictly:
+- Read each item + quantity from the EXPECTED PDF
+- Find that item on the ACTUAL sheet
+- Read the value in column #${ci} for that item
+- Compare the two quantities
+
+RULES for reading the actual sheet:
+- Leftmost column (item names) is NOT a data column.
+- Date header row appears at TOP OF EVERY PAGE. Re-verify column #${ci} on each page.
+- Section headers (HYBRIDS, INDICA, etc.) are categories — track for context only.
+- Blank cells on actual = null (item exists but no count recorded).
+- Handwriting may be ambiguous — note it.
+- Match items tolerantly (minor naming differences OK).
+
+Status flags:
+- "match" = quantities equal
+- "short" = actual < expected
+- "over" = actual > expected
+- "missing" = item on expected but blank/absent on actual
+
+CRITICAL JSON RULES:
+- Valid JSON only. No markdown, no code fences.
+- Keep notes under 10 words. Empty string if none.
+- No double quotes inside note strings. No trailing commas.
+
+Respond ONLY with JSON:
+
+{
+  "report_date": "${td}",
+  "column_used": { "index": ${ci}, "header_raw": "${ch}" },
+  "items": [
+    {
+      "item": "string",
+      "category": "string",
+      "expected": number,
+      "actual": number_or_null,
+      "difference": number_or_null,
+      "status": "match" | "short" | "over" | "missing",
+      "note": "string"
+    }
+  ],
+  "summary": {
+    "total_items": number,
+    "discrepancies": number,
+    "ambiguous": number
+  }
+}`;}
 
 // WhatsApp
 function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\n✅ All ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
