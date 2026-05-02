@@ -556,50 +556,17 @@ Respond ONLY with JSON, no prose, no markdown:
   "note": "string"
 }`;
 
-function pass2Prompt(ci,ch,td){return`You are an inventory auditor. You have two inputs:
+function pass2Prompt(ci,ch,td){return`Inventory auditor. Two inputs: EXPECTED PDF (items+quantities for one date) and ACTUAL sheet (multi-page, ~14 day-columns).
 
-1. The EXPECTED PDF — lists specific items and their expected quantities for one date.
-2. The ACTUAL sheet — a multi-page physical pack sheet with ~14 day-columns.
+Use column #${ci} (1-based, skip item-name column). Header:"${ch}". Date:${td}.
 
-Use data column #${ci} (1-based, NOT counting the item-name column). Header: "${ch}". Date: ${td}.
+ONLY check items on EXPECTED PDF with a quantity. For each: find on actual sheet, read column #${ci}, compare. Rules: leftmost col is names not data. Section headers=categories. Blank=null. Match names tolerantly.
 
-CRITICAL: ONLY check items that appear on the EXPECTED PDF with a quantity.
-Do NOT list items that are only on the actual sheet. Do NOT scan every row.
-For each expected item: find it on the actual sheet, read column #${ci}, compare.
+Status: "match"|"short"|"over"|"missing"
 
-RULES:
-- Leftmost column is NOT a data column.
-- Date header row appears at TOP OF EVERY PAGE. Re-verify column #${ci} each page.
-- Section headers are categories — track for context only.
-- Blank cells = null. Handwriting may be ambiguous — note it.
-- Match items tolerantly.
+COMPACT JSON output. note="" unless ambiguous. No markdown. No text outside JSON. No trailing commas. All strings double-quoted.
 
-Status: "match", "short", "over", "missing"
-
-JSON RULES: Valid JSON only. No markdown. Notes under 10 words. No double quotes in notes. No trailing commas.
-
-Respond ONLY with JSON:
-
-{
-  "report_date": "${td}",
-  "column_used": { "index": ${ci}, "header_raw": "${ch}" },
-  "items": [
-    {
-      "item": "string",
-      "category": "string",
-      "expected": number,
-      "actual": number_or_null,
-      "difference": number_or_null,
-      "status": "match" | "short" | "over" | "missing",
-      "note": "string"
-    }
-  ],
-  "summary": {
-    "total_items": number,
-    "discrepancies": number,
-    "ambiguous": number
-  }
-}`;}
+{"report_date":"${td}","column_used":{"index":${ci},"header_raw":"${ch}"},"items":[{"item":"x","category":"x","expected":0,"actual":0,"difference":0,"status":"match","note":""}],"summary":{"total_items":0,"discrepancies":0,"ambiguous":0}}`;}
 
 function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\n✅ All ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
 
@@ -631,7 +598,7 @@ runBtn.addEventListener("click",async()=>{
     let report=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
-        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],16384);
+        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],32000);
         report=parseJSON(extractText(p2));
         break;
       }catch(parseErr){
