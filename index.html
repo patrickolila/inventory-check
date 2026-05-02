@@ -287,6 +287,20 @@
   @keyframes ember-pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.6); opacity: 1; } }
   .loading-text { font-size: 16px; font-weight: 500; color: var(--rasta-gold); animation: text-fade 2s ease-in-out infinite; }
   @keyframes text-fade { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* Dreadlock sway animations */
+  .dread { transform-origin: top center; }
+  .dread-1 { animation: sway-1 3s ease-in-out infinite; }
+  .dread-2 { animation: sway-2 3.5s ease-in-out infinite; }
+  .dread-3 { animation: sway-3 2.8s ease-in-out infinite; }
+  .dread-4 { animation: sway-1 3.2s ease-in-out infinite 0.3s; }
+  .dread-5 { animation: sway-2 2.6s ease-in-out infinite 0.5s; }
+  .dread-6 { animation: sway-3 3.4s ease-in-out infinite 0.2s; }
+  .dread-7 { animation: sway-1 2.9s ease-in-out infinite 0.4s; }
+  .dread-8 { animation: sway-2 3.1s ease-in-out infinite 0.6s; }
+  @keyframes sway-1 { 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(4deg); } }
+  @keyframes sway-2 { 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-5deg); } }
+  @keyframes sway-3 { 0%,100%{ transform: rotate(-2deg); } 50%{ transform: rotate(3deg); } }
 </style>
 </head>
 <body>
@@ -327,6 +341,25 @@
       <rect x="50" y="39" width="80" height="5" fill="#2d8a4e"/>
       <rect x="50" y="44" width="80" height="4" fill="#1a1a2e"/>
       <circle cx="90" cy="20" r="8" fill="#1a1a2e"/>
+      <!-- Dreadlocks hanging from under the tam -->
+      <!-- Left side dreads -->
+      <path class="dread dread-1" d="M52 48 Q48 70 45 95 Q43 110 46 130" stroke="#1a1a2e" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path class="dread dread-2" d="M56 50 Q50 75 48 100 Q46 120 50 140" stroke="#222" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      <path class="dread dread-3" d="M54 49 Q46 68 42 88 Q40 105 44 120" stroke="#1a1a2e" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <!-- Right side dreads -->
+      <path class="dread dread-4" d="M128 48 Q132 70 135 95 Q137 110 134 130" stroke="#1a1a2e" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path class="dread dread-5" d="M124 50 Q130 75 132 100 Q134 120 130 140" stroke="#222" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+      <path class="dread dread-6" d="M126 49 Q134 68 138 88 Q140 105 136 120" stroke="#1a1a2e" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <!-- Back dreads (visible behind head) -->
+      <path class="dread dread-7" d="M65 48 Q60 80 58 110 Q56 130 60 150" stroke="#151530" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path class="dread dread-8" d="M115 48 Q120 80 122 110 Q124 130 120 150" stroke="#151530" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <!-- Dread beads (small colored accents) -->
+      <circle cx="45" cy="100" r="3" fill="#d62828" opacity="0.8"/>
+      <circle cx="135" cy="95" r="3" fill="#f2a900" opacity="0.8"/>
+      <circle cx="48" cy="120" r="3" fill="#2d8a4e" opacity="0.8"/>
+      <circle cx="132" cy="115" r="3" fill="#d62828" opacity="0.8"/>
+      <circle cx="42" cy="88" r="2.5" fill="#f2a900" opacity="0.7"/>
+      <circle cx="138" cy="88" r="2.5" fill="#2d8a4e" opacity="0.7"/>
       <!-- Head -->
       <ellipse cx="90" cy="65" rx="32" ry="28" fill="#1a1a2e"/>
       <!-- Sunglasses -->
@@ -639,13 +672,15 @@ async function analyzeQuote(quote, author){
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:300,
-        messages:[{role:"user",content:`"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action — from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it or whether the attribution is correct. Just analyze the quote itself.`}]
+        messages:[{role:"user",content:`"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action — from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it or whether the attribution is correct. Do NOT use markdown, bold, or any formatting — just plain text. Just analyze the quote itself.`}]
       })
     });
     if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||"API error "+resp.status);}
     const data=await resp.json();
     const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    quoteAnalysisEl.innerHTML=text;
+    // Convert basic markdown bold/italic to HTML
+    const html=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
+    quoteAnalysisEl.innerHTML=html;
     quoteAnalysisEl.classList.remove("loading");
   }catch(err){
     quoteAnalysisEl.innerHTML="Could not load analysis: "+err.message;
