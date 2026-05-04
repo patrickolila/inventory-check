@@ -28,6 +28,24 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; overflow-x: hidden; }
 
+  /* ═══ VIDEO BACKGROUND ═══ */
+  .video-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 1;
+    pointer-events: none;
+  }
+  .video-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+  }
+
   /* ═══ RASTA STRIPE BANDS ═══ */
   .rasta-stripes {
     position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 10;
@@ -177,6 +195,25 @@
     font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
   }
   .quote-refresh:hover { background: rgba(242,169,0,0.1); border-color: var(--rasta-gold); }
+  .mute-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.5);
+    color: var(--rasta-gold);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    z-index: 5;
+  }
+  .mute-btn:hover { background: rgba(242,169,0,0.15); border-color: var(--rasta-gold); }
 
   /* Upload */
   .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -305,26 +342,16 @@
 </head>
 <body>
 
+<!-- Video background — drop any bg.mp4 in your repo -->
+<video class="video-bg" autoplay muted loop playsinline>
+  <source src="bg.mp4" type="video/mp4">
+</video>
+<div class="video-overlay"></div>
+
 <!-- Rasta stripe bars -->
 <div class="rasta-stripes"></div>
 <div class="rasta-stripes-bottom"></div>
 
-<!-- Background layers -->
-<div class="bg-layer">
-  <svg class="leaf" style="top:8%;left:5%;width:160px" viewBox="0 0 100 120"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z" fill="#f2a900"/></svg>
-  <svg class="leaf" style="top:20%;right:8%;width:200px" viewBox="0 0 100 120"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z" fill="#2d8a4e"/></svg>
-  <svg class="leaf" style="top:50%;left:-2%;width:140px" viewBox="0 0 100 120"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z" fill="#d62828"/></svg>
-  <svg class="leaf" style="top:60%;right:5%;width:180px" viewBox="0 0 100 120"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z" fill="#f2a900"/></svg>
-  <svg class="leaf" style="top:80%;left:20%;width:150px" viewBox="0 0 100 120"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z" fill="#2d8a4e"/></svg>
-  <svg class="leaf" style="top:35%;left:55%;width:120px" viewBox="0 0 100 120"><path d="M50 0C50 0 30 20 20 45C10 70 25 90 50 120C75 90 90 70 80 45C70 20 50 0 50 0Z M50 30C35 40 15 55 20 45C25 35 40 25 50 30Z M50 30C65 40 85 55 80 45C75 35 60 25 50 30Z M50 50C30 55 10 75 20 65C30 55 45 45 50 50Z M50 50C70 55 90 75 80 65C70 55 55 45 50 50Z" fill="#d62828"/></svg>
-</div>
-<div class="bg-glow"></div>
-
-<!-- Drifting smoke -->
-<div class="smoke-layer">
-  <div class="drift-smoke"></div><div class="drift-smoke"></div><div class="drift-smoke"></div>
-  <div class="drift-smoke"></div><div class="drift-smoke"></div><div class="drift-smoke"></div>
-</div>
 
 <!-- Loading overlay -->
 <div class="loading-overlay" id="loadingOverlay">
@@ -403,6 +430,7 @@
 
   <!-- Daily motivational quote -->
   <div class="quote-card">
+    <button class="mute-btn" id="muteBtn" title="Unmute video">🔇</button>
     <div class="quote-text" id="quoteText">Loading quote...</div>
     <div class="quote-author" id="quoteAuthor"></div>
     <div class="quote-analysis loading" id="quoteAnalysis">Thinking...</div>
@@ -539,9 +567,12 @@ Also attached is the EXPECTED inventory PDF for a single date — read its date.
 Your job:
 1. Read the target date from the EXPECTED PDF and normalize it to YYYY-MM-DD.
 2. On page 1 of the actual sheet, look ONLY at the top date-header row. Count the data columns from left to right (do NOT count the item-name column). Find which data-column index (1-based) holds the target date.
-3. Dates may be written as just a day number. Use the sequence to disambiguate.
-
-If you cannot confidently identify the column, set found=false. Do NOT guess.
+3. Headers are written as DAY NUMBERS ONLY (e.g. "27, 28, 29, 30, 1, 2, 3..."). They do NOT show month or year. Use the sequence to determine which month each day belongs to:
+   - When the numbers decrease (e.g. 30 then 1), that is a month boundary.
+   - Days before the boundary are the previous month. Days after are the next month.
+   - Example: "27, 28, 29, 30, 1, 2, 3" means 27-30 are one month and 1-3 are the next.
+4. TRUST THE EXPECTED PDF for the month and year. If the expected PDF says "May 3 2026" and you see a "3" after a month boundary in the sequence, that IS May 3. You do NOT need to independently verify the month or year from the sheet — the sheet only shows day numbers and that is normal.
+5. Set found=true as long as the day number matches in the correct position relative to the month boundary.
 
 Respond ONLY with JSON, no prose, no markdown:
 
@@ -716,6 +747,17 @@ async function displayNewQuote(){
 
 displayNewQuote();
 quoteRefreshBtn.addEventListener("click", displayNewQuote);
+
+// ═══ MUTE/UNMUTE VIDEO ═══
+const muteBtn=$("muteBtn");
+const bgVideo=document.querySelector(".video-bg");
+muteBtn.addEventListener("click",()=>{
+  if(bgVideo){
+    bgVideo.muted=!bgVideo.muted;
+    muteBtn.textContent=bgVideo.muted?"🔇":"🔊";
+    muteBtn.title=bgVideo.muted?"Unmute video":"Mute video";
+  }
+});
 </script>
 </body>
 </html>
