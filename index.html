@@ -464,12 +464,28 @@ function showError(m){errorBox.textContent=m;errorBox.classList.add("visible");}
 function showLoading(msg){loadingText.textContent=(msg||"Checking inventory")+"...";loadingOverlay.classList.add("visible");}
 function hideLoading(){loadingOverlay.classList.remove("visible");}
 
-async function callClaude(key,messages,maxTokens=4096){
-  let resp;
-  try{resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages})});}
-  catch(e){throw new Error("Network error: "+e.message+". Try disabling ad blockers or use Chrome.");}
-  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||`API error ${resp.status}`);}
-  return await resp.json();
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+async function callClaude(key,messages,maxTokens=4096,onWait){
+  for(let attempt=1;attempt<=4;attempt++){
+    let resp;
+    try{
+      resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages})});
+    }
+    catch(e){throw new Error("Network error: "+e.message+". Try disabling ad blockers or use Chrome.");}
+    if(resp.ok){return await resp.json();}
+    // 429 = rate limit. Honor Retry-After header (seconds) or fall back to 60s.
+    if(resp.status===429&&attempt<4){
+      const ra=parseInt(resp.headers.get("retry-after")||"60",10);
+      const waitSec=Math.max(5,Math.min(ra,90));
+      if(onWait)onWait(waitSec,attempt);
+      await sleep(waitSec*1000);
+      continue;
+    }
+    const e=await resp.json().catch(()=>({}));
+    throw new Error(e?.error?.message||`API error ${resp.status}`);
+  }
+  throw new Error("Rate limit retries exhausted. Wait a minute and try again.");
 }
 function extractText(r){return r.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();}
 function parseJSON(raw){
@@ -564,7 +580,8 @@ runBtn.addEventListener("click",async()=>{
   statusSteps=[];statusBar.classList.remove("visible");confirmBox.classList.remove("visible");errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");runBtn.disabled=true;
   try{
     const s1=addStatus("Pass 1: identifying today's column");showLoading("Reading the expected PDF");
-    const p1=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED PDF (single-date):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL sheet (look at PAGE 1 only):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:PASS1_PROMPT}]}],1024);
+    const onRateWait=(sec,attempt)=>{showLoading(`Rate limited, waiting ${sec}s (attempt ${attempt})`);};
+    const p1=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED PDF (single-date):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL sheet (look at PAGE 1 only):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:PASS1_PROMPT}]}],1024,onRateWait);
     pass1Result=parseJSON(extractText(p1));updateStatus(s1,"done");hideLoading();
     if(!pass1Result.found){showError("Pass 1 failed: "+(pass1Result.note||"could not find date"));updateStatus(s1,"error");runBtn.disabled=false;return;}
     confirmDetail.innerHTML=`Date from expected PDF: <span>${pass1Result.expected_date_raw} -> ${pass1Result.target_date}</span><br>Headers seen: <span>${(pass1Result.all_headers_raw||[]).join(", ")}</span>`;
@@ -578,11 +595,16 @@ runBtn.addEventListener("click",async()=>{
     let report=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
-        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],6000);
+        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],6000,onRateWait);
         report=parseJSON(extractText(p2));
         break;
       }catch(parseErr){
-        if(attempt===1){updateStatus(s2,"running");addStatus("Retrying Pass 2 (JSON issue)");showLoading("Retrying");}
+        if(attempt===1){
+          updateStatus(s2,"running");addStatus("Retrying Pass 2 (JSON issue) - waiting 65s for rate limit window");showLoading("Waiting before retry");
+          // Wait past the 1-minute TPM window so the retry doesn't compound the rate-limit hit
+          await sleep(65000);
+          showLoading("Retrying");
+        }
         else{throw parseErr;}
       }
     }
