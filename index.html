@@ -4,433 +4,372 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventory Check</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #1a0e05;
-    --surface: rgba(30, 18, 8, 0.88);
-    --surface-2: rgba(45, 28, 12, 0.75);
-    --border: rgba(255, 180, 0, 0.18);
-    --border-hover: rgba(255, 180, 0, 0.4);
-    --text: #f5e6d0;
-    --text-muted: #9a7a55;
-    --rasta-red: #d62828;
-    --rasta-gold: #f2a900;
-    --rasta-green: #2d8a4e;
-    --accent: var(--rasta-gold);
-    --accent-dim: #c98a00;
-    --accent-glow: rgba(242, 169, 0, 0.2);
-    --red: #e74c3c;
-    --radius: 12px;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Outfit', system-ui, sans-serif;
+    --bg: #f5f1e8;
+    --surface: #ffffff;
+    --surface-2: #faf6ec;
+    --border: #d9cfb8;
+    --border-strong: #b8a888;
+    --text: #2a1f10;
+    --text-muted: #7a6a52;
+    --rasta-red: #c92a2a;
+    --rasta-gold: #d49a00;
+    --rasta-green: #2d7a3e;
+    --shadow: 0 1px 3px rgba(60, 40, 10, 0.08);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6; overflow-x: hidden; }
-
-  /* ═══ VIDEO BACKGROUND ═══ */
-  .video-bg {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    opacity: 1;
-    pointer-events: none;
-  }
-  .video-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    background: rgba(0, 0, 0, 0.4);
-    pointer-events: none;
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 15px;
   }
 
-  /* ═══ RASTA STRIPE BANDS ═══ */
-  .rasta-stripes {
-    position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 10;
-    background: linear-gradient(to right, var(--rasta-red) 33%, var(--rasta-gold) 33% 66%, var(--rasta-green) 66%);
-  }
-  .rasta-stripes-bottom {
-    position: fixed; bottom: 0; left: 0; right: 0; height: 6px; z-index: 10;
-    background: linear-gradient(to right, var(--rasta-green) 33%, var(--rasta-gold) 33% 66%, var(--rasta-red) 66%);
-  }
+  /* Top + bottom rasta bands as flat solid stripes (no gradients) */
+  .stripe-top, .stripe-bot { display: flex; height: 4px; }
+  .stripe-top > div, .stripe-bot > div { flex: 1; }
+  .s-red { background: var(--rasta-red); }
+  .s-gold { background: var(--rasta-gold); }
+  .s-green { background: var(--rasta-green); }
 
-  /* ═══ TROPICAL WARM BACKGROUND ═══ */
-  .bg-glow {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse at 15% 15%, rgba(214, 40, 40, 0.07) 0%, transparent 55%),
-      radial-gradient(ellipse at 85% 20%, rgba(242, 169, 0, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 80%, rgba(45, 138, 78, 0.06) 0%, transparent 45%),
-      radial-gradient(ellipse at 70% 50%, rgba(242, 169, 0, 0.04) 0%, transparent 40%);
-  }
+  .container { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; }
 
-  /* ═══ CANNABIS LEAF SILHOUETTES ═══ */
-  .bg-layer { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
-  .leaf {
-    position: absolute; opacity: 0.03;
-    animation: float-leaf 20s ease-in-out infinite;
-  }
-  .leaf:nth-child(1) { top: 8%; left: 5%; width: 160px; animation-delay: 0s; }
-  .leaf:nth-child(2) { top: 20%; right: 8%; width: 200px; animation-delay: -4s; opacity: 0.025; }
-  .leaf:nth-child(3) { top: 50%; left: -2%; width: 140px; animation-delay: -9s; }
-  .leaf:nth-child(4) { top: 60%; right: 5%; width: 180px; animation-delay: -14s; opacity: 0.02; }
-  .leaf:nth-child(5) { top: 80%; left: 20%; width: 150px; animation-delay: -7s; }
-  .leaf:nth-child(6) { top: 35%; left: 55%; width: 120px; animation-delay: -11s; opacity: 0.02; }
-  @keyframes float-leaf {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    25% { transform: translateY(-10px) rotate(3deg); }
-    75% { transform: translateY(-15px) rotate(-2deg); }
-  }
-
-  /* ═══ DRIFTING SMOKE ═══ */
-  .smoke-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-  .drift-smoke {
-    position: absolute;
-    width: 300px;
-    height: 80px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(220, 210, 190, 0.04) 0%, transparent 70%);
-    filter: blur(20px);
-  }
-  .drift-smoke:nth-child(1) { bottom: 15%; animation: drift1 25s linear infinite; }
-  .drift-smoke:nth-child(2) { bottom: 35%; animation: drift2 30s linear infinite 3s; width: 400px; height: 100px; }
-  .drift-smoke:nth-child(3) { bottom: 55%; animation: drift3 22s linear infinite 7s; width: 250px; }
-  .drift-smoke:nth-child(4) { bottom: 25%; animation: drift1 28s linear infinite 12s; width: 350px; height: 90px; opacity: 0.7; }
-  .drift-smoke:nth-child(5) { bottom: 70%; animation: drift2 35s linear infinite 5s; width: 280px; opacity: 0.5; }
-  .drift-smoke:nth-child(6) { bottom: 45%; animation: drift3 20s linear infinite 15s; width: 320px; height: 85px; opacity: 0.6; }
-
-  @keyframes drift1 {
-    0% { left: -350px; opacity: 0; transform: translateY(0); }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { left: 110%; opacity: 0; transform: translateY(-30px); }
-  }
-  @keyframes drift2 {
-    0% { right: -400px; left: auto; opacity: 0; transform: translateY(0); }
-    10% { opacity: 0.8; }
-    90% { opacity: 0.8; }
-    100% { right: 110%; left: auto; opacity: 0; transform: translateY(-20px); }
-  }
-  @keyframes drift3 {
-    0% { left: -300px; opacity: 0; transform: translateY(10px); }
-    15% { opacity: 0.6; }
-    85% { opacity: 0.6; }
-    100% { left: 115%; opacity: 0; transform: translateY(-25px); }
-  }
-
-  /* ═══ CONTENT ═══ */
-  .container { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; padding: 56px 20px 80px; }
-
-  .header { margin-bottom: 44px; text-align: center; }
+  .header { margin-bottom: 28px; text-align: center; }
   .header h1 {
-    font-size: 38px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px;
-    background: linear-gradient(135deg, var(--rasta-red) 0%, var(--rasta-gold) 45%, var(--rasta-green) 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--rasta-green);
+    margin-bottom: 4px;
   }
-  .header p { color: var(--text-muted); font-size: 15px; }
-
-  /* Rasta accent bar under header */
-  .header-bar {
-    width: 80px; height: 4px; margin: 16px auto 0; border-radius: 2px;
-    background: linear-gradient(to right, var(--rasta-red), var(--rasta-gold), var(--rasta-green));
-  }
+  .header h1 .accent-r { color: var(--rasta-red); }
+  .header h1 .accent-g { color: var(--rasta-gold); }
+  .header p { color: var(--text-muted); font-size: 14px; }
 
   .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 24px; margin-bottom: 16px; backdrop-filter: blur(12px); transition: border-color 0.3s;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
   }
-  .card:hover { border-color: var(--border-hover); }
-  .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--rasta-gold); margin-bottom: 16px; }
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--rasta-gold);
+    margin-bottom: 12px;
+  }
 
-  /* Template download */
-  .template-download { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
-  .download-link {
-    display: inline-flex; align-items: center; gap: 8px; color: var(--rasta-gold); text-decoration: none;
-    font-size: 14px; font-weight: 600; padding: 10px 16px; border: 1px solid var(--border);
-    border-radius: 8px; background: rgba(242, 169, 0, 0.05); transition: all 0.2s;
-  }
-  .download-link:hover { background: rgba(242, 169, 0, 0.12); border-color: var(--rasta-gold); box-shadow: 0 0 12px rgba(242, 169, 0, 0.15); }
-  .download-hint { display: block; margin-top: 8px; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-
-  /* ═══ MOTIVATIONAL QUOTE ═══ */
-  .quote-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    padding: 28px 24px; margin-bottom: 16px; backdrop-filter: blur(12px);
-    text-align: center; position: relative; overflow: hidden;
-  }
-  .quote-card::before {
-    content: '\201C'; position: absolute; top: -10px; left: 16px;
-    font-size: 100px; font-family: Georgia, serif; color: var(--rasta-gold);
-    opacity: 0.08; line-height: 1; pointer-events: none;
-  }
-  .quote-text { font-size: 18px; font-weight: 500; font-style: italic; line-height: 1.6; color: var(--text); margin-bottom: 12px; min-height: 50px; }
-  .quote-author { font-size: 14px; color: var(--rasta-gold); font-weight: 600; margin-bottom: 4px; }
+  /* Quote */
+  .quote-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); border-left: 4px solid var(--rasta-gold); }
+  .quote-text { font-size: 16px; font-style: italic; line-height: 1.5; margin-bottom: 8px; }
+  .quote-author { font-size: 13px; color: var(--rasta-gold); font-weight: 600; margin-bottom: 10px; }
   .quote-author a { color: var(--rasta-gold); text-decoration: none; }
   .quote-author a:hover { text-decoration: underline; }
   .quote-analysis {
-    font-size: 14px; line-height: 1.7; color: var(--text-muted); text-align: left;
-    padding: 16px; background: rgba(0,0,0,0.25); border-radius: 8px;
-    margin-top: 16px; min-height: 40px; transition: opacity 0.4s;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    margin-top: 10px;
   }
-  .quote-analysis.loading {
-    display: flex; align-items: center; gap: 14px;
-    color: var(--rasta-gold); font-style: italic; font-weight: 500;
-  }
-  .loading-dots { display: inline-flex; gap: 4px; }
-  .loading-dots span {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--rasta-gold);
-    animation: dot-bounce 1.4s ease-in-out infinite;
-  }
-  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes dot-bounce {
-    0%, 80%, 100% { transform: scale(0.4); opacity: 0.3; }
-    40% { transform: scale(1); opacity: 1; }
-  }
+  .quote-analysis.loading { color: var(--rasta-gold); font-style: italic; }
   .quote-refresh {
-    margin-top: 14px; padding: 8px 20px; background: transparent; color: var(--rasta-gold);
-    border: 1px solid var(--border); border-radius: 6px; font-family: var(--sans);
-    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  }
-  .quote-refresh:hover { background: rgba(242,169,0,0.1); border-color: var(--rasta-gold); }
-  .mute-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--border);
-    background: rgba(0,0,0,0.5);
+    margin-top: 10px;
+    padding: 6px 14px;
+    background: var(--surface);
     color: var(--rasta-gold);
-    font-size: 18px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    z-index: 5;
   }
-  .mute-btn:hover { background: rgba(242,169,0,0.15); border-color: var(--rasta-gold); }
+  .quote-refresh:hover { background: var(--surface-2); }
 
-  /* Upload */
-  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* Template download */
+  .template-download { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .download-link {
+    display: inline-block;
+    color: var(--rasta-gold);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface-2);
+  }
+  .download-link:hover { background: var(--bg); border-color: var(--rasta-gold); }
+  .download-hint { display: block; margin-top: 6px; font-size: 12px; color: var(--text-muted); }
+
+  /* Upload zones */
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .upload-zone {
-    border: 2px dashed var(--border); border-radius: 10px; padding: 32px 16px; text-align: center;
-    cursor: pointer; transition: all 0.25s; background: rgba(0,0,0,0.15);
+    border: 2px dashed var(--border-strong);
+    border-radius: 4px;
+    padding: 22px 12px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--surface-2);
+    display: block;
   }
-  .upload-zone:hover { border-color: var(--rasta-gold); background: rgba(242, 169, 0, 0.04); }
-  .upload-zone.has-file { border-color: var(--rasta-green); border-style: solid; background: rgba(45, 138, 78, 0.08); }
+  .upload-zone:hover { border-color: var(--rasta-gold); background: #fdf6e3; }
+  .upload-zone.has-file {
+    border-color: var(--rasta-green);
+    border-style: solid;
+    background: #e8f3eb;
+  }
   .upload-zone input { display: none; }
-  .upload-label { font-size: 15px; font-weight: 700; display: block; margin-bottom: 4px; }
+  .upload-label { font-size: 14px; font-weight: 700; display: block; margin-bottom: 2px; }
   .upload-hint { font-size: 12px; color: var(--text-muted); }
-  .upload-filename { font-family: var(--mono); font-size: 11px; color: var(--rasta-green); margin-top: 10px; word-break: break-all; }
-
-  /* Run button — rasta gradient */
-  .run-btn {
-    width: 100%; padding: 16px;
-    background: linear-gradient(135deg, var(--rasta-red), var(--rasta-gold), var(--rasta-green));
-    color: #000; border: none; border-radius: 10px; font-family: var(--sans); font-size: 16px;
-    font-weight: 800; cursor: pointer; transition: all 0.25s; letter-spacing: 0.5px;
-    text-transform: uppercase; box-shadow: 0 4px 20px rgba(242, 169, 0, 0.2);
+  .upload-filename {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    color: var(--rasta-green);
+    margin-top: 8px;
+    word-break: break-all;
   }
-  .run-btn:hover { box-shadow: 0 4px 30px rgba(242, 169, 0, 0.4); transform: translateY(-1px); }
-  .run-btn:disabled { background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+
+  /* Run button — flat solid green */
+  .run-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--rasta-green);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .run-btn:hover { background: #246332; }
+  .run-btn:disabled { background: #b5b0a3; color: #fff; cursor: not-allowed; }
 
   /* Status */
-  .status-bar { display: none; margin-bottom: 16px; }
+  .status-bar { display: none; margin-bottom: 14px; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; }
   .status-bar.visible { display: block; }
-  .status-step { padding: 8px 0; font-size: 14px; display: flex; align-items: center; gap: 10px; }
-  .status-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
-  .status-icon.running { border: 2px solid var(--rasta-gold); border-top-color: transparent; animation: spin 0.8s linear infinite; }
-  .status-icon.done { background: var(--rasta-green); color: #fff; }
-  .status-icon.error { background: var(--rasta-red); color: #fff; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-step { padding: 4px 0; font-size: 13px; }
+  .status-step::before { display: inline-block; width: 16px; }
+  .status-step.running::before { content: "..."; color: var(--rasta-gold); font-weight: bold; }
+  .status-step.done::before { content: "OK"; color: var(--rasta-green); font-weight: bold; font-size: 11px; }
+  .status-step.error::before { content: "X"; color: var(--rasta-red); font-weight: bold; }
 
   /* Confirm */
-  .confirm-box { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; backdrop-filter: blur(12px); }
+  .confirm-box {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--rasta-gold);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
   .confirm-box.visible { display: block; }
-  .confirm-box h3 { font-size: 16px; margin-bottom: 12px; font-weight: 700; color: var(--rasta-gold); }
-  .confirm-detail { font-family: var(--mono); font-size: 13px; line-height: 1.8; margin-bottom: 16px; color: var(--text-muted); }
+  .confirm-box h3 { font-size: 14px; margin-bottom: 10px; color: var(--rasta-gold); }
+  .confirm-detail {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+  }
   .confirm-detail span { color: var(--text); }
-  .confirm-match { color: var(--rasta-green); font-weight: 700; font-size: 14px; margin-bottom: 16px; display: block; }
-  .confirm-btns { display: flex; gap: 10px; }
-  .confirm-btns button { padding: 10px 28px; border-radius: 8px; border: none; font-family: var(--sans); font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.15s; }
-  .btn-yes { background: var(--rasta-green); color: #fff; }
-  .btn-yes:hover { background: #246e3e; }
-  .btn-no { background: transparent; color: var(--text); border: 1px solid var(--border) !important; }
+  .confirm-match { color: var(--rasta-green); font-weight: 700; font-size: 13px; margin-bottom: 12px; display: block; }
+  .confirm-btns { display: flex; gap: 8px; }
+  .confirm-btns button {
+    padding: 8px 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-yes { background: var(--rasta-green); color: #fff; border-color: var(--rasta-green); }
+  .btn-yes:hover { background: #246332; }
+  .btn-no { background: var(--surface); color: var(--text); }
   .btn-no:hover { background: var(--surface-2); }
 
   /* Results */
   .results { display: none; }
   .results.visible { display: block; }
-  .results-summary { display: flex; gap: 12px; margin-bottom: 24px; }
-  .stat-card { flex: 1; background: var(--surface-2); border-radius: 10px; padding: 20px; text-align: center; border: 1px solid var(--border); }
-  .stat-value { font-size: 32px; font-weight: 800; font-family: var(--mono); }
-  .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; font-weight: 600; }
+  .results-summary { display: flex; gap: 8px; margin-bottom: 18px; }
+  .stat-card {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 8px;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    font-family: Consolas, "Courier New", monospace;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+    font-weight: 600;
+  }
   .stat-card.green .stat-value { color: var(--rasta-green); }
   .stat-card.red .stat-value { color: var(--rasta-red); }
 
-  .disc-section { margin-bottom: 16px; }
-  .disc-category { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--rasta-gold); padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-  .disc-item { display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px; padding: 10px 0; font-size: 14px; border-bottom: 1px solid rgba(242,169,0,0.06); align-items: center; }
+  .disc-section { margin-bottom: 12px; }
+  .disc-category {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--rasta-gold);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .disc-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    border-bottom: 1px solid var(--surface-2);
+    align-items: center;
+  }
   .disc-name { font-weight: 600; }
-  .disc-num { font-family: var(--mono); font-size: 13px; text-align: right; min-width: 50px; color: var(--text-muted); }
-  .disc-variance { font-family: var(--mono); font-size: 13px; font-weight: 700; min-width: 40px; text-align: right; }
+  .disc-num {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    text-align: right;
+    min-width: 50px;
+    color: var(--text-muted);
+  }
+  .disc-variance {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: right;
+  }
   .disc-variance.positive { color: var(--rasta-green); }
   .disc-variance.negative { color: var(--rasta-red); }
-  .all-match-banner { text-align: center; padding: 48px 20px; font-size: 20px; color: var(--rasta-green); font-weight: 700; }
+  .all-match-banner {
+    text-align: center;
+    padding: 32px 16px;
+    font-size: 18px;
+    color: var(--rasta-green);
+    font-weight: 700;
+  }
 
-  .whatsapp-section { margin-top: 24px; }
-  .whatsapp-preview { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 16px; font-family: var(--mono); font-size: 12px; line-height: 1.8; white-space: pre-wrap; color: var(--text-muted); max-height: 200px; overflow-y: auto; margin-bottom: 12px; border: 1px solid var(--border); }
-  .copy-btn { padding: 12px 24px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-  .copy-btn:hover { background: rgba(242,169,0,0.15); border-color: var(--rasta-gold); }
+  .whatsapp-section { margin-top: 18px; }
+  .whatsapp-preview {
+    background: var(--surface-2);
+    border-radius: 4px;
+    padding: 12px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--text);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+  }
+  .copy-btn {
+    padding: 8px 18px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: var(--surface-2); border-color: var(--rasta-gold); }
   .copy-btn.copied { background: var(--rasta-green); color: #fff; border-color: var(--rasta-green); }
-  .error-box { display: none; background: rgba(40,8,8,0.8); border: 1px solid rgba(214,40,40,0.3); border-radius: 10px; padding: 16px; margin-bottom: 16px; font-size: 14px; color: var(--rasta-red); backdrop-filter: blur(8px); }
+
+  .error-box {
+    display: none;
+    background: #fbecec;
+    border: 1px solid var(--rasta-red);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--rasta-red);
+  }
   .error-box.visible { display: block; }
-  .reset-btn { display: none; margin-top: 24px; padding: 12px 24px; background: transparent; color: var(--text-muted); border: 1px solid var(--border) !important; border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+
+  .reset-btn {
+    display: none;
+    margin-top: 18px;
+    padding: 8px 18px;
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
   .reset-btn.visible { display: inline-block; }
   .reset-btn:hover { color: var(--text); border-color: var(--rasta-gold); }
 
-  /* ═══ LOADING OVERLAY ═══ */
+  /* Loading overlay — static, no animations */
   .loading-overlay {
-    display: none; position: fixed; inset: 0; z-index: 1000;
-    background: rgba(26, 14, 5, 0.94); backdrop-filter: blur(10px);
-    flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1000;
+    background: rgba(245, 241, 232, 0.95);
+    align-items: center;
+    justify-content: center;
   }
   .loading-overlay.visible { display: flex; }
-  .smoker-scene { position: relative; width: 200px; height: 220px; }
-  .character { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); animation: char-bob 3s ease-in-out infinite; }
-  @keyframes char-bob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-4px); } }
-  .smoke-cloud { position: absolute; border-radius: 50%; background: radial-gradient(ellipse, rgba(220,210,190,0.1) 0%, transparent 70%); pointer-events: none; }
-  .smoke-cloud:nth-child(1) { width: 18px; height: 18px; left: 140px; bottom: 160px; animation: cloud-rise 3.5s ease-out infinite; --sx: -15px; }
-  .smoke-cloud:nth-child(2) { width: 14px; height: 14px; left: 145px; bottom: 155px; animation: cloud-rise 4s ease-out infinite 0.5s; --sx: 10px; }
-  .smoke-cloud:nth-child(3) { width: 22px; height: 22px; left: 135px; bottom: 158px; animation: cloud-rise 3s ease-out infinite 1s; --sx: -25px; }
-  .smoke-cloud:nth-child(4) { width: 16px; height: 16px; left: 142px; bottom: 162px; animation: cloud-rise 4.5s ease-out infinite 1.5s; --sx: 5px; }
-  .smoke-cloud:nth-child(5) { width: 20px; height: 20px; left: 138px; bottom: 156px; animation: cloud-rise 3.8s ease-out infinite 2s; --sx: -20px; }
-  .smoke-cloud:nth-child(6) { width: 12px; height: 12px; left: 148px; bottom: 160px; animation: cloud-rise 3.2s ease-out infinite 0.8s; --sx: 15px; }
-  @keyframes cloud-rise {
-    0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
-    60% { transform: translate(var(--sx, -10px), -60px) scale(2.5); opacity: 0.06; }
-    100% { transform: translate(var(--sx, -10px), -120px) scale(4); opacity: 0; }
+  .loading-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--rasta-gold);
+    border-radius: 4px;
+    padding: 20px 28px;
+    box-shadow: 0 4px 12px rgba(60, 40, 10, 0.15);
+    text-align: center;
   }
-  .joint-glow {
-    position: absolute; left: 152px; bottom: 152px; width: 8px; height: 8px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,120,30,0.9) 0%, rgba(255,80,0,0.4) 50%, transparent 70%);
-    animation: ember-pulse 1.2s ease-in-out infinite;
-  }
-  @keyframes ember-pulse { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.6); opacity: 1; } }
-  .loading-text { font-size: 16px; font-weight: 500; color: var(--rasta-gold); animation: text-fade 2s ease-in-out infinite; }
-  @keyframes text-fade { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
-
-  /* Dreadlock sway animations */
-  .dread { transform-origin: top center; }
-  .dread-1 { animation: sway-1 3s ease-in-out infinite; }
-  .dread-2 { animation: sway-2 3.5s ease-in-out infinite; }
-  .dread-3 { animation: sway-3 2.8s ease-in-out infinite; }
-  .dread-4 { animation: sway-1 3.2s ease-in-out infinite 0.3s; }
-  .dread-5 { animation: sway-2 2.6s ease-in-out infinite 0.5s; }
-  .dread-6 { animation: sway-3 3.4s ease-in-out infinite 0.2s; }
-  .dread-7 { animation: sway-1 2.9s ease-in-out infinite 0.4s; }
-  .dread-8 { animation: sway-2 3.1s ease-in-out infinite 0.6s; }
-  @keyframes sway-1 { 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(4deg); } }
-  @keyframes sway-2 { 0%,100%{ transform: rotate(0deg); } 50%{ transform: rotate(-5deg); } }
-  @keyframes sway-3 { 0%,100%{ transform: rotate(-2deg); } 50%{ transform: rotate(3deg); } }
+  .loading-text { font-size: 15px; font-weight: 600; color: var(--text); }
 </style>
 </head>
 <body>
 
-<!-- Video background — drop any bg.mp4 in your repo -->
-<video class="video-bg" autoplay muted loop playsinline>
-  <source src="bg.mp4" type="video/mp4">
-</video>
-<div class="video-overlay"></div>
-
-<!-- Rasta stripe bars -->
-<div class="rasta-stripes"></div>
-<div class="rasta-stripes-bottom"></div>
-
-
-<!-- Loading overlay -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="smoker-scene">
-    <div class="smoke-cloud"></div><div class="smoke-cloud"></div><div class="smoke-cloud"></div>
-    <div class="smoke-cloud"></div><div class="smoke-cloud"></div><div class="smoke-cloud"></div>
-    <div class="joint-glow"></div>
-    <svg class="character" width="180" height="200" viewBox="0 0 180 200" xmlns="http://www.w3.org/2000/svg">
-      <!-- Rasta tam/beanie -->
-      <ellipse cx="90" cy="40" rx="40" ry="20" fill="#2d8a4e"/>
-      <rect x="50" y="28" width="80" height="22" rx="4" fill="#2d8a4e"/>
-      <rect x="50" y="28" width="80" height="6" rx="3" fill="#d62828"/>
-      <rect x="50" y="34" width="80" height="5" fill="#f2a900"/>
-      <rect x="50" y="39" width="80" height="5" fill="#2d8a4e"/>
-      <rect x="50" y="44" width="80" height="4" fill="#1a1a2e"/>
-      <circle cx="90" cy="20" r="8" fill="#1a1a2e"/>
-      <!-- Dreadlocks hanging from under the tam -->
-      <!-- Left side dreads -->
-      <path class="dread dread-1" d="M52 48 Q48 70 45 95 Q43 110 46 130" stroke="#1a1a2e" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <path class="dread dread-2" d="M56 50 Q50 75 48 100 Q46 120 50 140" stroke="#222" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-      <path class="dread dread-3" d="M54 49 Q46 68 42 88 Q40 105 44 120" stroke="#1a1a2e" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <!-- Right side dreads -->
-      <path class="dread dread-4" d="M128 48 Q132 70 135 95 Q137 110 134 130" stroke="#1a1a2e" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <path class="dread dread-5" d="M124 50 Q130 75 132 100 Q134 120 130 140" stroke="#222" stroke-width="4.5" fill="none" stroke-linecap="round"/>
-      <path class="dread dread-6" d="M126 49 Q134 68 138 88 Q140 105 136 120" stroke="#1a1a2e" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <!-- Back dreads (visible behind head) -->
-      <path class="dread dread-7" d="M65 48 Q60 80 58 110 Q56 130 60 150" stroke="#151530" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <path class="dread dread-8" d="M115 48 Q120 80 122 110 Q124 130 120 150" stroke="#151530" stroke-width="4" fill="none" stroke-linecap="round"/>
-      <!-- Dread beads (small colored accents) -->
-      <circle cx="45" cy="100" r="3" fill="#d62828" opacity="0.8"/>
-      <circle cx="135" cy="95" r="3" fill="#f2a900" opacity="0.8"/>
-      <circle cx="48" cy="120" r="3" fill="#2d8a4e" opacity="0.8"/>
-      <circle cx="132" cy="115" r="3" fill="#d62828" opacity="0.8"/>
-      <circle cx="42" cy="88" r="2.5" fill="#f2a900" opacity="0.7"/>
-      <circle cx="138" cy="88" r="2.5" fill="#2d8a4e" opacity="0.7"/>
-      <!-- Head -->
-      <ellipse cx="90" cy="65" rx="32" ry="28" fill="#1a1a2e"/>
-      <!-- Sunglasses -->
-      <rect x="62" y="54" width="22" height="14" rx="3" fill="#111" stroke="#f2a900" stroke-width="1"/>
-      <rect x="96" y="54" width="22" height="14" rx="3" fill="#111" stroke="#f2a900" stroke-width="1"/>
-      <line x1="84" y1="61" x2="96" y2="61" stroke="#f2a900" stroke-width="1"/>
-      <rect x="65" y="57" width="6" height="3" rx="1" fill="rgba(242,169,0,0.15)"/>
-      <rect x="99" y="57" width="6" height="3" rx="1" fill="rgba(242,169,0,0.15)"/>
-      <!-- Nose & mouth -->
-      <ellipse cx="90" cy="72" rx="3" ry="2" fill="#252540"/>
-      <path d="M80 80 Q85 86 90 84 Q95 82 98 78" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-      <!-- Joint -->
-      <rect x="97" y="76" width="42" height="4" rx="2" fill="#e8d5b0" transform="rotate(-12, 97, 78)"/>
-      <rect x="97" y="76" width="8" height="4" rx="2" fill="#b8a080" transform="rotate(-12, 97, 78)"/>
-      <circle cx="138" cy="72" r="3.5" fill="#ff6b2b" opacity="0.9"><animate attributeName="opacity" values="0.9;0.5;0.9" dur="1.5s" repeatCount="indefinite"/></circle>
-      <circle cx="138" cy="72" r="5" fill="none" stroke="#ff6b2b" stroke-width="0.5" opacity="0.3"><animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.3;0;0.3" dur="1.5s" repeatCount="indefinite"/></circle>
-      <!-- Hoodie with rasta stripes -->
-      <path d="M55 92 Q50 100 48 130 L48 180 Q48 190 60 190 L120 190 Q132 190 132 180 L132 130 Q130 100 125 92 Z" fill="#1a1a2e"/>
-      <rect x="48" y="110" width="84" height="8" fill="#d62828" opacity="0.7"/>
-      <rect x="48" y="118" width="84" height="8" fill="#f2a900" opacity="0.7"/>
-      <rect x="48" y="126" width="84" height="8" fill="#2d8a4e" opacity="0.7"/>
-      <!-- Arms -->
-      <path d="M48 110 Q30 115 28 130 Q26 140 35 142" stroke="#1a1a2e" stroke-width="12" fill="none" stroke-linecap="round"/>
-      <path d="M132 110 Q150 115 152 130 Q154 140 145 142" stroke="#1a1a2e" stroke-width="12" fill="none" stroke-linecap="round"/>
-      <circle cx="35" cy="144" r="7" fill="#252540"/>
-      <circle cx="145" cy="144" r="7" fill="#252540"/>
-    </svg>
-  </div>
-  <div class="loading-text" id="loadingText">Checking inventory...</div>
+<div class="stripe-top">
+  <div class="s-red"></div><div class="s-gold"></div><div class="s-green"></div>
 </div>
 
-<!-- Main content -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="loading-text" id="loadingText">Checking inventory...</div>
+  </div>
+</div>
+
 <div class="container">
   <div class="header">
-    <h1>Inventory Check</h1>
+    <h1><span class="accent-r">Inventory</span> <span class="accent-g">Check</span></h1>
     <p>Upload expected + actual sheets. Get discrepancies back instantly.</p>
-    <div class="header-bar"></div>
   </div>
 
   <input type="hidden" id="apiKey" />
 
-  <!-- Daily motivational quote -->
   <div class="quote-card">
-    <button class="mute-btn" id="muteBtn" title="Unmute video">🔇</button>
     <div class="quote-text" id="quoteText">Loading quote...</div>
     <div class="quote-author" id="quoteAuthor"></div>
     <div class="quote-analysis loading" id="quoteAnalysis">Thinking...</div>
@@ -441,7 +380,6 @@
     <div class="card-title">Upload Files</div>
     <div class="template-download">
       <a href="inventory-sheet.docx" download class="download-link">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v9m0 0L5 7m3 3l3-3M2 12v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Download blank actual sheet template (.docx)
       </a>
       <span class="download-hint">Print this template and use it for your physical counts. Fill in the dates at the top of each page before starting a new cycle.</span>
@@ -487,6 +425,10 @@
   <button class="reset-btn" id="resetBtn">Start over</button>
 </div>
 
+<div class="stripe-bot">
+  <div class="s-green"></div><div class="s-gold"></div><div class="s-red"></div>
+</div>
+
 <script>
 let expectedB64=null,actualB64=null,pass1Result=null;
 const MODEL="claude-opus-4-7";
@@ -498,7 +440,6 @@ const apiKeyInput=$("apiKey"),expectedFile=$("expectedFile"),actualFile=$("actua
   resultsSummary=$("resultsSummary"),resultsBody=$("resultsBody"),whatsappPreview=$("whatsappPreview"),
   copyBtn=$("copyBtn"),resetBtn=$("resetBtn"),loadingOverlay=$("loadingOverlay"),loadingText=$("loadingText");
 
-// Key — URL param or localStorage, no visible UI
 const urlParams=new URLSearchParams(window.location.search);
 const urlKey=urlParams.get("key");
 if(urlKey&&urlKey.startsWith("sk-ant-")){localStorage.setItem("anthropic_api_key",urlKey);window.history.replaceState({},"",window.location.pathname);}
@@ -517,13 +458,11 @@ actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64
 let statusSteps=[];
 function addStatus(t,s="running"){statusSteps.push({text:t,state:s});renderStatus();return statusSteps.length-1;}
 function updateStatus(i,s){statusSteps[i].state=s;renderStatus();}
-function renderStatus(){statusBar.classList.add("visible");statusBar.innerHTML=statusSteps.map(s=>{let ic="";if(s.state==="running")ic='<div class="status-icon running"></div>';else if(s.state==="done")ic='<div class="status-icon done">✓</div>';else if(s.state==="error")ic='<div class="status-icon error">✕</div>';return`<div class="status-step">${ic}<span>${s.text}</span></div>`;}).join("");}
+function renderStatus(){statusBar.classList.add("visible");statusBar.innerHTML=statusSteps.map(s=>`<div class="status-step ${s.state}">${s.text}</div>`).join("");}
 function showError(m){errorBox.textContent=m;errorBox.classList.add("visible");}
 
-const loadingMessages=["Checking inventory...","Reading the expected sheet...","Scanning the pack sheet...","Matching items...","Counting up...","Almost there..."];
-let loadingInterval=null;
-function showLoading(msg){loadingText.textContent=msg||"Checking inventory...";loadingOverlay.classList.add("visible");let i=0;loadingInterval=setInterval(()=>{i=(i+1)%loadingMessages.length;loadingText.textContent=loadingMessages[i];},4000);}
-function hideLoading(){loadingOverlay.classList.remove("visible");if(loadingInterval)clearInterval(loadingInterval);}
+function showLoading(msg){loadingText.textContent=(msg||"Checking inventory")+"...";loadingOverlay.classList.add("visible");}
+function hideLoading(){loadingOverlay.classList.remove("visible");}
 
 async function callClaude(key,messages,maxTokens=4096){
   let resp;
@@ -535,26 +474,19 @@ async function callClaude(key,messages,maxTokens=4096){
 function extractText(r){return r.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();}
 function parseJSON(raw){
   let c=raw;
-  // Strip markdown fences
   if(c.startsWith("```")){c=c.replace(/^```json?\s*/i,"").replace(/```\s*$/,"");}
-  // Try as-is
   try{return JSON.parse(c);}catch{}
-  // Fix trailing commas
   let f=c.replace(/,(\s*[}\]])/g,"$1");
   try{return JSON.parse(f);}catch{}
-  // Fix single quotes used as property delimiters
   f=f.replace(/'/g,'"');
   try{return JSON.parse(f);}catch{}
-  // Try to fix truncated JSON by closing open brackets/braces
   let fixed=f;
   const opens=(fixed.match(/\[/g)||[]).length;
   const closes=(fixed.match(/\]/g)||[]).length;
   const openBraces=(fixed.match(/\{/g)||[]).length;
   const closeBraces=(fixed.match(/\}/g)||[]).length;
-  // Remove any trailing incomplete property/value
   fixed=fixed.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"]*$/, "");
   fixed=fixed.replace(/,\s*$/, "");
-  // Close unclosed structures
   for(let i=0;i<opens-closes;i++) fixed+="]";
   for(let i=0;i<openBraces-closeBraces;i++) fixed+="}";
   try{return JSON.parse(fixed);}catch(e){throw new Error("JSON Parse error: "+e.message);}
@@ -589,23 +521,40 @@ Respond ONLY with JSON, no prose, no markdown:
 
 function pass2Prompt(ci,ch,td){return`Inventory auditor. Two inputs: EXPECTED PDF (items+quantities for one date) and ACTUAL sheet (multi-page, ~14 day-columns).
 
-Use column #${ci} (1-based, skip item-name column). Header:"${ch}". Date:${td}.
+TARGET COLUMN: data-column #${ci} (1-based, skip item-name column). Its header on page 1 reads exactly "${ch}". Date:${td}.
 
-ONLY check items on EXPECTED PDF with a quantity. For each: find on actual sheet, read column #${ci}, compare. Rules: leftmost col is names not data. Section headers=categories. Blank=null. Match names tolerantly.
+═══ COLUMN DRIFT PREVENTION — READ TWICE ═══
+The single most common error on this task is reading the WRONG column (off by one to the right or left). This produces a result where almost every item is over by +1 with no negatives, which is mathematically impossible from real counting and means you drifted columns. To prevent this:
 
-Status: "match"|"short"|"over"|"missing"
+1. Before reading ANY value, mentally trace a vertical line straight up from the cell to the top header row of that page. Confirm the header above your cell reads "${ch}". If it reads anything else, you are in the wrong column — recount data columns from the leftmost data column (column #1) and adjust.
 
-COMPACT JSON output. note="" unless ambiguous. No markdown. No text outside JSON. No trailing commas. All strings double-quoted.
+2. Each new page of the actual sheet repeats the same date-header row at the top. The target column is ALWAYS the column whose header reads "${ch}" — verify this header on EVERY page before reading any cells from that page.
 
-{"report_date":"${td}","column_used":{"index":${ci},"header_raw":"${ch}"},"items":[{"item":"x","category":"x","expected":0,"actual":0,"difference":0,"status":"match","note":""}],"summary":{"total_items":0,"discrepancies":0,"ambiguous":0}}`;}
+3. If you cannot clearly see the header alignment for a row (e.g. row is far from top of page, or columns are skewed), set actual=null and note="column alignment unclear" rather than guessing. A null is better than a wrong number.
 
-function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\n✅ All ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
+4. Do NOT assume the column position is the same pixel-x on every page. Sheets get scanned at slightly different angles. Use the header text "${ch}" as your anchor, not horizontal position.
+
+═══ TASK ═══
+Check every item on EXPECTED PDF with a quantity. For each: find the row on actual sheet, read the cell under header "${ch}" (which is data-column #${ci}), compare. Rules: leftmost col is names not data. Section headers=categories. Blank=null. Match names tolerantly.
+
+Status: "short"|"over"|"missing" (do NOT include matches)
+
+CRITICAL: items[] must contain ONLY discrepancies (status != match). Items where expected==actual are EXCLUDED from items[] but still counted in summary.total_items.
+
+summary.total_items = total items checked from expected PDF (matches + discrepancies)
+summary.discrepancies = count of items in items[] array (must equal items.length)
+
+COMPACT JSON output. note="" unless ambiguous or column alignment unclear. No markdown. No text outside JSON. No trailing commas. All strings double-quoted.
+
+{"report_date":"${td}","column_used":{"index":${ci},"header_raw":"${ch}"},"items":[{"item":"x","category":"x","expected":0,"actual":0,"difference":0,"status":"short","note":""}],"summary":{"total_items":0,"discrepancies":0,"ambiguous":0}}`;}
+
+function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\nAll ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
 
 function renderResults(report){const s=report.summary||{};const t=s.total_items||0,d=s.discrepancies||0,m=t-d;
   resultsSummary.innerHTML=`<div class="stat-card green"><div class="stat-value">${m}</div><div class="stat-label">Match</div></div><div class="stat-card ${d>0?"red":"green"}"><div class="stat-value">${d}</div><div class="stat-label">Discrepancies</div></div><div class="stat-card"><div class="stat-value">${t}</div><div class="stat-label">Total</div></div>`;
   const flagged=(report.items||[]).filter(i=>i.status!=="match");
-  if(!flagged.length){resultsBody.innerHTML='<div class="all-match-banner">✅ All items match</div>';}
-  else{const bc={},co=[];for(const i of flagged){const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}let h="";for(const c of co){h+=`<div class="disc-section"><div class="disc-category">${c}</div>`;for(const i of bc[c]){const e=i.expected!=null?i.expected:"—",a=i.actual!=null?i.actual:"—";let v="—",vc="";if(i.expected!=null&&i.actual!=null){const diff=i.actual-i.expected;v=(diff>0?"+":"")+diff;vc=diff>0?"positive":"negative";}h+=`<div class="disc-item"><span class="disc-name">${i.item}</span><span class="disc-num">exp ${e}</span><span class="disc-num">act ${a}</span><span class="disc-variance ${vc}">${v}</span></div>`;}h+="</div>";}resultsBody.innerHTML=h;}
+  if(!flagged.length){resultsBody.innerHTML='<div class="all-match-banner">All items match</div>';}
+  else{const bc={},co=[];for(const i of flagged){const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}let h="";for(const c of co){h+=`<div class="disc-section"><div class="disc-category">${c}</div>`;for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-",vc="";if(i.expected!=null&&i.actual!=null){const diff=i.actual-i.expected;v=(diff>0?"+":"")+diff;vc=diff>0?"positive":"negative";}h+=`<div class="disc-item"><span class="disc-name">${i.item}</span><span class="disc-num">exp ${e}</span><span class="disc-num">act ${a}</span><span class="disc-variance ${vc}">${v}</span></div>`;}h+="</div>";}resultsBody.innerHTML=h;}
   const wa=formatWhatsApp(report);whatsappPreview.textContent=wa;
   copyBtn.onclick=async()=>{await navigator.clipboard.writeText(wa);copyBtn.textContent="Copied!";copyBtn.classList.add("copied");setTimeout(()=>{copyBtn.textContent="Copy to clipboard";copyBtn.classList.remove("copied");},2000);};
   results.classList.add("visible");resetBtn.classList.add("visible");}
@@ -614,26 +563,26 @@ runBtn.addEventListener("click",async()=>{
   const apiKey=apiKeyInput.value.trim();if(!apiKey||!expectedB64||!actualB64)return;
   statusSteps=[];statusBar.classList.remove("visible");confirmBox.classList.remove("visible");errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");runBtn.disabled=true;
   try{
-    const s1=addStatus("Pass 1: identifying today's column...");showLoading("Reading the expected PDF...");
+    const s1=addStatus("Pass 1: identifying today's column");showLoading("Reading the expected PDF");
     const p1=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED PDF (single-date):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL sheet (look at PAGE 1 only):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:PASS1_PROMPT}]}],1024);
     pass1Result=parseJSON(extractText(p1));updateStatus(s1,"done");hideLoading();
     if(!pass1Result.found){showError("Pass 1 failed: "+(pass1Result.note||"could not find date"));updateStatus(s1,"error");runBtn.disabled=false;return;}
-    confirmDetail.innerHTML=`Date from expected PDF: <span>${pass1Result.expected_date_raw} → ${pass1Result.target_date}</span><br>Headers seen: <span>${(pass1Result.all_headers_raw||[]).join(", ")}</span>`;
-    confirmMatch.textContent=`✓ Column #${pass1Result.column_index} of ${pass1Result.total_data_columns} — header reads '${pass1Result.column_header_raw}'`;
+    confirmDetail.innerHTML=`Date from expected PDF: <span>${pass1Result.expected_date_raw} -> ${pass1Result.target_date}</span><br>Headers seen: <span>${(pass1Result.all_headers_raw||[]).join(", ")}</span>`;
+    confirmMatch.textContent=`Column #${pass1Result.column_index} of ${pass1Result.total_data_columns} - header reads '${pass1Result.column_header_raw}'`;
     confirmBox.classList.add("visible");
     const confirmed=await new Promise(r=>{btnYes.onclick=()=>r(true);btnNo.onclick=()=>r(false);});
     confirmBox.classList.remove("visible");
-    if(!confirmed){addStatus("Aborted.");runBtn.disabled=false;return;}
-    const s2=addStatus("Pass 2: checking expected items...");showLoading("Matching items...");
+    if(!confirmed){addStatus("Aborted","done");runBtn.disabled=false;return;}
+    const s2=addStatus("Pass 2: checking expected items");showLoading("Matching items");
     const pass2Content=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:pass2Prompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}];
     let report=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
-        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],32000);
+        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],6000);
         report=parseJSON(extractText(p2));
         break;
       }catch(parseErr){
-        if(attempt===1){updateStatus(s2,"running");addStatus("Retrying Pass 2 (JSON issue)...");showLoading("Retrying...");}
+        if(attempt===1){updateStatus(s2,"running");addStatus("Retrying Pass 2 (JSON issue)");showLoading("Retrying");}
         else{throw parseErr;}
       }
     }
@@ -649,7 +598,6 @@ resetBtn.addEventListener("click",()=>{
   errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");updateRunBtn();
 });
 
-// ═══ MOTIVATIONAL QUOTES (embedded — no external API needed) ═══
 const quoteTextEl=$("quoteText"), quoteAuthorEl=$("quoteAuthor"),
       quoteAnalysisEl=$("quoteAnalysis"), quoteRefreshBtn=$("quoteRefresh");
 
@@ -670,7 +618,7 @@ const QUOTES=[
   {quote:"I have not failed. I've just found 10,000 ways that won't work.",author:"Thomas Edison"},
   {quote:"What lies behind us and what lies before us are tiny matters compared to what lies within us.",author:"Ralph Waldo Emerson"},
   {quote:"A person who never made a mistake never tried anything new.",author:"Albert Einstein"},
-  {quote:"Your limitation—it's only your imagination.",author:"Unknown"},
+  {quote:"Your limitation - it's only your imagination.",author:"Unknown"},
   {quote:"Great things never come from comfort zones.",author:"Unknown"},
   {quote:"Dream it. Wish it. Do it.",author:"Unknown"},
   {quote:"The harder you work for something, the greater you'll feel when you achieve it.",author:"Unknown"},
@@ -698,66 +646,39 @@ const QUOTES=[
 
 async function analyzeQuote(quote, author){
   const key=apiKeyInput.value.trim();
-  if(!key){quoteAnalysisEl.innerHTML="No API key set. Visit this page with ?key=sk-ant-... to enable analysis.";quoteAnalysisEl.classList.remove("loading");return;}
-  quoteAnalysisEl.innerHTML='<div class="loading-dots"><span></span><span></span><span></span></div> Breaking it down...';
+  if(!key){quoteAnalysisEl.textContent="No API key set. Visit this page with ?key=sk-ant-... to enable analysis.";quoteAnalysisEl.classList.remove("loading");return;}
+  quoteAnalysisEl.textContent="Breaking it down...";
   quoteAnalysisEl.classList.add("loading");
   try{
     const resp=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
       body:JSON.stringify({model:MODEL,max_tokens:300,
-        messages:[{role:"user",content:`"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action — from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it or whether the attribution is correct. Do NOT use markdown, bold, or any formatting — just plain text. Just analyze the quote itself.`}]
+        messages:[{role:"user",content:`"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action - from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it or whether the attribution is correct. Do NOT use markdown, bold, or any formatting - just plain text. Just analyze the quote itself.`}]
       })
     });
     if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||"API error "+resp.status);}
     const data=await resp.json();
     const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    // Convert basic markdown bold/italic to HTML
-    const html=text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>');
-    quoteAnalysisEl.innerHTML=html;
+    quoteAnalysisEl.textContent=text;
     quoteAnalysisEl.classList.remove("loading");
   }catch(err){
-    quoteAnalysisEl.innerHTML="Could not load analysis: "+err.message;
+    quoteAnalysisEl.textContent="Could not load analysis: "+err.message;
     quoteAnalysisEl.classList.remove("loading");
   }
 }
 
-async function fetchQuotesFromAPI(){
-  const url="https://gist.githubusercontent.com/camperbot/5a022b72e96c4c9585c32bf6a75f62d9/raw/e3c6895ce42069f0ee7e991229064f167fe8ccdc/quotes.json";
-  const resp=await fetch(url);
-  const data=await resp.json();
-  return data.quotes.map(q=>({quote:q.quote,author:q.author}));
-}
-
-async function displayNewQuote(){
-  let quotes;
-  try {
-    quotes=await fetchQuotesFromAPI();
-  } catch(err){
-    // Fallback to embedded quotes if API fails
-    quotes=QUOTES;
-  }
-  const q=quotes[Math.floor(Math.random()*quotes.length)];
+function displayNewQuote(){
+  const q=QUOTES[Math.floor(Math.random()*QUOTES.length)];
   const bio=`https://en.wikipedia.org/wiki/${q.author.split(" ").join("_")}`;
-  quoteTextEl.textContent=`\u201C${q.quote}\u201D`;
-  if(q.author==="Unknown"){quoteAuthorEl.textContent=`\u2014 ${q.author}`;}
-  else{quoteAuthorEl.innerHTML=`<a href="${bio}" target="_blank">\u2014 ${q.author}</a>`;}
+  quoteTextEl.textContent=`"${q.quote}"`;
+  if(q.author==="Unknown"){quoteAuthorEl.textContent=`- ${q.author}`;}
+  else{quoteAuthorEl.innerHTML=`<a href="${bio}" target="_blank">- ${q.author}</a>`;}
   analyzeQuote(q.quote, q.author);
 }
 
 displayNewQuote();
 quoteRefreshBtn.addEventListener("click", displayNewQuote);
-
-// ═══ MUTE/UNMUTE VIDEO ═══
-const muteBtn=$("muteBtn");
-const bgVideo=document.querySelector(".video-bg");
-muteBtn.addEventListener("click",()=>{
-  if(bgVideo){
-    bgVideo.muted=!bgVideo.muted;
-    muteBtn.textContent=bgVideo.muted?"🔇":"🔊";
-    muteBtn.title=bgVideo.muted?"Unmute video":"Mute video";
-  }
-});
 </script>
 </body>
 </html>
