@@ -197,10 +197,7 @@
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // Faithful port of the working Python check_inventory.py — same two-pass
-// architecture, same prompts, same parsing approach. JS-side conveniences:
-// pdf.js extracts page 1 of the actual sheet for Pass 1 (matches the Python
-// pypdf trimming), localStorage holds the API key, results render in the page
-// instead of being written to disk.
+// architecture, same prompts, same parsing approach.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MODEL = "claude-opus-4-7";
@@ -219,9 +216,8 @@ const apiKeyInput = $("apiKey"), expectedFile = $("expectedFile"), actualFile = 
       whatsappPreview = $("whatsappPreview"), copyBtn = $("copyBtn"), resetBtn = $("resetBtn"),
       loadingOverlay = $("loadingOverlay"), loadingText = $("loadingText");
 
-// API key handling — URL param OR localStorage. Setup link looks like:
+// API key handling — URL param OR localStorage. Setup link:
 //   https://your.github.io/inventory-check/?key=sk-ant-...
-// Open it once on a device; the key persists in that browser.
 const urlParams = new URLSearchParams(window.location.search);
 const urlKey = urlParams.get("key");
 if (urlKey && urlKey.startsWith("sk-ant-")) {
@@ -275,7 +271,6 @@ actualFile.addEventListener("change", async () => {
   updateRunBtn();
 });
 
-// ── Status bar ───────────────────────────────────────────────────────────────
 let statusSteps = [];
 function addStatus(text, state = "running") {
   statusSteps.push({ text, state });
@@ -291,10 +286,8 @@ function showError(m) { errorBox.textContent = m; errorBox.classList.add("visibl
 function showLoading(msg) { loadingText.textContent = (msg || "Checking inventory") + "..."; loadingOverlay.classList.add("visible"); }
 function hideLoading() { loadingOverlay.classList.remove("visible"); }
 
-// ── Page-1 extraction of the actual PDF (mirrors Python's first_page_pdf_block)
-// We use pdf.js to render page 1 onto a canvas, then send that single
-// rendered page as a PNG image. This drops Pass 1's input from ~12 pages to 1.
-async function extractPage1AsPdfBase64(arrayBuffer) {
+// Render page 1 of the actual PDF and send as PNG (mirrors Python first_page_pdf_block).
+async function extractPage1AsPng(arrayBuffer) {
   if (typeof pdfjsLib === "undefined") throw new Error("PDF library not loaded");
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
   const page = await pdf.getPage(1);
@@ -306,7 +299,7 @@ async function extractPage1AsPdfBase64(arrayBuffer) {
   return canvas.toDataURL("image/png").split(",")[1];
 }
 
-// ── JSON parser with Python-equivalent fallbacks (Python parse_json_response) ─
+// JSON parser — mirrors Python parse_json_response fallback chain.
 function parseJSONResponse(raw) {
   let text = raw.trim();
   if (text.startsWith("```")) {
@@ -329,7 +322,6 @@ function parseJSONResponse(raw) {
   }
 }
 
-// ── Anthropic API call ───────────────────────────────────────────────────────
 async function callClaude(key, messages, maxTokens) {
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -351,7 +343,7 @@ function extractText(r) {
   return r.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
 }
 
-// ── Prompts (verbatim from working Python) ────────────────────────────────────
+// ── PROMPTS — verbatim from working Python check_inventory.py ────────────────
 const PASS1_PROMPT = `You are looking at PAGE 1 of a multi-page physical inventory pack sheet. The first row contains date headers (one column per day, ~14 days). The leftmost column is the item-name column and is NOT a data column.
 
 Also attached is the EXPECTED inventory PDF for a single date — read its date.
@@ -527,7 +519,6 @@ function renderResults(report) {
   resetBtn.classList.add("visible");
 }
 
-// ── Main run handler ─────────────────────────────────────────────────────────
 runBtn.addEventListener("click", async () => {
   const apiKey = apiKeyInput.value.trim();
   if (!apiKey || !expectedB64 || !actualB64) return;
@@ -541,10 +532,10 @@ runBtn.addEventListener("click", async () => {
   runBtn.disabled = true;
 
   try {
-    // PASS 1 — page 1 of actual sheet only
+    // PASS 1
     const s1 = addStatus("Pass 1: locating today's column on page 1");
     showLoading("Reading page 1 of the actual sheet");
-    const page1Png = await extractPage1AsPdfBase64(actualBytes);
+    const page1Png = await extractPage1AsPng(actualBytes);
     const p1Resp = await callClaude(apiKey, [{
       role: "user",
       content: [
@@ -577,7 +568,7 @@ runBtn.addEventListener("click", async () => {
     confirmBox.classList.remove("visible");
     if (!confirmed) { addStatus("Aborted", "done"); runBtn.disabled = false; return; }
 
-    // PASS 2 — full audit
+    // PASS 2
     const s2 = addStatus("Pass 2: extracting items across all pages");
     showLoading("Running full audit");
     const p2Resp = await callClaude(apiKey, [{
