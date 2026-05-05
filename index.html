@@ -290,7 +290,7 @@
   .copy-btn.copied { background: var(--rasta-green); color: #fff; border-color: var(--rasta-green); }
   .error-box { display: none; background: rgba(40,8,8,0.8); border: 1px solid rgba(214,40,40,0.3); border-radius: 10px; padding: 16px; margin-bottom: 16px; font-size: 14px; color: var(--rasta-red); backdrop-filter: blur(8px); }
   .error-box.visible { display: block; }
-  .reset-btn { display: none; margin-top: 24px; padding: 12px 24px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .reset-btn { display: none; margin-top: 24px; padding: 12px 24px; background: transparent; color: var(--text-muted); border: 1px solid var(--border) !important; border-radius: 8px; font-family: var(--sans); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
   .reset-btn.visible { display: inline-block; }
   .reset-btn:hover { color: var(--text); border-color: var(--rasta-gold); }
 
@@ -489,7 +489,7 @@
 
 <script>
 let expectedB64=null,actualB64=null,pass1Result=null;
-const MODEL="claude-sonnet-4-6";
+const MODEL="claude-opus-4-7";
 const $=id=>document.getElementById(id);
 const apiKeyInput=$("apiKey"),expectedFile=$("expectedFile"),actualFile=$("actualFile"),
   expectedZone=$("expectedZone"),actualZone=$("actualZone"),expectedName=$("expectedName"),actualName=$("actualName"),
@@ -705,7 +705,7 @@ async function analyzeQuote(quote, author){
     const resp=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:300,
+      body:JSON.stringify({model:MODEL,max_tokens:300,
         messages:[{role:"user",content:`"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action — from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it or whether the attribution is correct. Do NOT use markdown, bold, or any formatting — just plain text. Just analyze the quote itself.`}]
       })
     });
