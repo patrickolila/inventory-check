@@ -292,9 +292,8 @@ function showLoading(msg) { loadingText.textContent = (msg || "Checking inventor
 function hideLoading() { loadingOverlay.classList.remove("visible"); }
 
 // ── Page-1 extraction of the actual PDF (mirrors Python's first_page_pdf_block)
-// We use pdf.js to render page 1 onto a canvas, then re-encode that single
-// page as a tiny new PDF that we send to Pass 1. This drops Pass 1's input
-// from ~12 pages to 1 page, matching the Python script's behavior.
+// We use pdf.js to render page 1 onto a canvas, then send that single
+// rendered page as a PNG image. This drops Pass 1's input from ~12 pages to 1.
 async function extractPage1AsPdfBase64(arrayBuffer) {
   if (typeof pdfjsLib === "undefined") throw new Error("PDF library not loaded");
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
@@ -304,28 +303,20 @@ async function extractPage1AsPdfBase64(arrayBuffer) {
   canvas.width = viewport.width; canvas.height = viewport.height;
   const ctx = canvas.getContext("2d");
   await page.render({ canvasContext: ctx, viewport }).promise;
-  // Convert canvas to a one-page PDF using jsPDF? No — we don't want the dep.
-  // Instead, send the canvas as a PNG image. Claude accepts images directly,
-  // and a single rendered page-1 image is exactly what Pass 1 needs.
   return canvas.toDataURL("image/png").split(",")[1];
 }
 
 // ── JSON parser with Python-equivalent fallbacks (Python parse_json_response) ─
 function parseJSONResponse(raw) {
   let text = raw.trim();
-  // Strip markdown code fences
   if (text.startsWith("```")) {
     text = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
   }
-  // Attempt 1: as-is
   try { return JSON.parse(text); } catch {}
-  // Attempt 2: remove trailing commas before } or ]
   let fixed = text.replace(/,(\s*[}\]])/g, "$1");
   try { return JSON.parse(fixed); } catch {}
-  // Attempt 3: strip control chars that may have leaked into strings
   fixed = fixed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
   try { return JSON.parse(fixed); } catch {}
-  // Attempt 4: close any unclosed brackets/braces (fallback for truncation)
   let close = fixed;
   const opens = (close.match(/\[/g) || []).length, closes = (close.match(/\]/g) || []).length;
   const ob = (close.match(/\{/g) || []).length, cb = (close.match(/\}/g) || []).length;
@@ -404,14 +395,11 @@ IMPORTANT RULES for reading the actual sheet:
 - Handwriting may be ambiguous (e.g. "0" vs "O", "2" vs "Z", "1" vs "/"). If you're unsure, record your best guess and add a note.
 
 Your job:
-- Extract items listed in the EXPECTED PDF — but ONLY items where the expected quantity is a positive integer (1 or higher).
-- For items on the EXPECTED PDF where the expected quantity is 0, blank, empty, or a dash: check the actual sheet first. If the actual cell in column #${colIndex} is ALSO 0, blank, or missing, skip the item entirely (do not include it in the output). But if the actual cell has a positive value (e.g. expected is blank but actual reads "1"), INCLUDE it with status="over" — this is a real discrepancy: inventory appeared that wasn't on the expected list.
-- For each remaining item, find the matching row on the ACTUAL sheet (across all pages) and read the value in column #${colIndex} only.
+- Extract every item listed in the EXPECTED PDF with its expected quantity.
+- For each, find the matching row on the ACTUAL sheet (across all pages) and read the value in column #${colIndex} only.
 - Match items tolerantly — same item may have minor naming differences.
 - Use category context to disambiguate items that appear in multiple sections (e.g. "Pineapple Express" can appear under both SATIVA and another category).
 - Also list any items present on the actual sheet (in column #${colIndex}) that are NOT on the expected PDF, as status="unexpected".
-
-The summary.total_items count should reflect ONLY the items you actually output (i.e. items with a positive expected quantity, plus any unexpected items). Do not count items you skipped.
 
 Status flags:
   "match"       -> quantities equal
@@ -493,28 +481,13 @@ function formatWhatsApp(report) {
 }
 
 function renderResults(report) {
-  // Filter logic:
-  //   DROP: expected is 0/null AND actual is 0/null (noise rows — nothing on hand)
-  //   KEEP: anything else — including "expected 0, actual 1" (unexpected appearance)
-  //         and "expected 1, actual 0" (missing inventory)
-  const filteredItems = (report.items || []).filter(i => {
-    if (i.status === "unexpected") return true; // always keep — actual has a value
-    const expHasValue = i.expected != null && i.expected !== 0 && i.expected !== "0";
-    const actHasValue = i.actual != null && i.actual !== 0 && i.actual !== "0";
-    // Keep if either side has a real value
-    return expHasValue || actHasValue;
-  });
-
-  // Recompute summary from the filtered list
-  const total = filteredItems.length;
-  const disc = filteredItems.filter(i => i.status !== "match").length;
-  const match = total - disc;
-
+  const s = report.summary || {};
+  const total = s.total_items || 0, disc = s.discrepancies || 0, match = total - disc;
   resultsSummary.innerHTML = `
     <div class="stat-card green"><div class="stat-value">${match}</div><div class="stat-label">Match</div></div>
     <div class="stat-card ${disc > 0 ? "red" : "green"}"><div class="stat-value">${disc}</div><div class="stat-label">Discrepancies</div></div>
     <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>`;
-  const flagged = filteredItems.filter(i => i.status !== "match");
+  const flagged = (report.items || []).filter(i => i.status !== "match");
   if (!flagged.length) {
     resultsBody.innerHTML = '<div class="all-match-banner">All items match</div>';
   } else {
@@ -542,13 +515,7 @@ function renderResults(report) {
     }
     resultsBody.innerHTML = html;
   }
-  // Build a cleaned report for WhatsApp using the same filtered list and recomputed counts
-  const cleanedReport = {
-    ...report,
-    items: filteredItems,
-    summary: { total_items: total, discrepancies: disc, ambiguous: (report.summary || {}).ambiguous || 0 },
-  };
-  const wa = formatWhatsApp(cleanedReport);
+  const wa = formatWhatsApp(report);
   whatsappPreview.textContent = wa;
   copyBtn.onclick = async () => {
     await navigator.clipboard.writeText(wa);
