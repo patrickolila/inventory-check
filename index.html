@@ -6,14 +6,12 @@
 <title>Inventory Check</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-  // Set worker source for pdf.js
-  if (typeof pdfjsLib !== 'undefined') {
+  if (typeof pdfjsLib !== "undefined") {
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   }
 </script>
 <style>
   :root {
-    /* Dark theme — warm-neutral, single accent */
     --bg: #1a1a1a;
     --surface: #242424;
     --surface-2: #2c2c2c;
@@ -21,362 +19,124 @@
     --border-strong: #4a4a4a;
     --text: #e8e6e1;
     --text-muted: #8a8580;
-    /* Single accent color (warm amber) — used for headings, links, highlights */
     --accent: #d4a574;
     --accent-dim: #9a7a55;
-    /* Functional colors — kept muted to not strain eyes */
     --success: #6b9b6e;
     --success-bg: #1f2a20;
     --danger: #c97070;
     --danger-bg: #2a1f1f;
-    /* Legacy aliases so existing class names still work */
-    --rasta-red: var(--danger);
-    --rasta-gold: var(--accent);
-    --rasta-green: var(--success);
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.5;
-    font-size: 15px;
-    color-scheme: dark;
+    background: var(--bg); color: var(--text);
+    line-height: 1.5; font-size: 15px; color-scheme: dark;
   }
-
-  /* Top + bottom rasta bands as flat solid stripes (no gradients) */
-  .stripe-top, .stripe-bot { height: 2px; background: var(--accent); opacity: 0.5; }
-
+  .stripe { height: 2px; background: var(--accent); opacity: 0.5; }
   .container { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; }
 
   .header { margin-bottom: 28px; text-align: center; }
-  .header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 4px;
-    letter-spacing: -0.3px;
-  }
-  .header h1 .accent-r,
-  .header h1 .accent-g { color: var(--accent); }
+  .header h1 { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 4px; letter-spacing: -0.3px; }
+  .header h1 .a { color: var(--accent); }
   .header p { color: var(--text-muted); font-size: 14px; }
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px;
-    margin-bottom: 14px;
-    box-shadow: var(--shadow);
-  }
-  .card-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--rasta-gold);
-    margin-bottom: 12px;
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 12px; }
 
-  /* Quote */
-  .quote-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); border-left: 4px solid var(--rasta-gold); }
+  .quote-card { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 6px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
   .quote-text { font-size: 16px; font-style: italic; line-height: 1.5; margin-bottom: 8px; }
-  .quote-author { font-size: 13px; color: var(--rasta-gold); font-weight: 600; margin-bottom: 10px; }
-  .quote-author a { color: var(--rasta-gold); text-decoration: none; }
+  .quote-author { font-size: 13px; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+  .quote-author a { color: var(--accent); text-decoration: none; }
   .quote-author a:hover { text-decoration: underline; }
-  .quote-analysis {
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text-muted);
-    padding: 10px 12px;
-    background: var(--surface-2);
-    border-radius: 4px;
-    margin-top: 10px;
-  }
-  .quote-analysis.loading { color: var(--rasta-gold); font-style: italic; }
-  .quote-refresh {
-    margin-top: 10px;
-    padding: 6px 14px;
-    background: var(--surface);
-    color: var(--rasta-gold);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-  }
+  .quote-analysis { font-size: 13px; line-height: 1.6; color: var(--text-muted); padding: 10px 12px; background: var(--surface-2); border-radius: 4px; margin-top: 10px; }
+  .quote-analysis.loading { color: var(--accent); font-style: italic; }
+  .quote-refresh { margin-top: 10px; padding: 6px 14px; background: var(--surface); color: var(--accent); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .quote-refresh:hover { background: var(--surface-2); }
 
-  /* Template download */
-  .template-download { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
-  .download-link {
-    display: inline-block;
-    color: var(--rasta-gold);
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: var(--surface-2);
-  }
-  .download-link:hover { background: var(--bg); border-color: var(--rasta-gold); }
-  .download-hint { display: block; margin-top: 6px; font-size: 12px; color: var(--text-muted); }
-
-  /* Upload zones */
   .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .upload-zone {
-    border: 2px dashed var(--border-strong);
-    border-radius: 4px;
-    padding: 22px 12px;
-    text-align: center;
-    cursor: pointer;
-    background: var(--surface-2);
-    display: block;
-  }
+  .upload-zone { border: 2px dashed var(--border-strong); border-radius: 4px; padding: 22px 12px; text-align: center; cursor: pointer; background: var(--surface-2); display: block; }
   .upload-zone:hover { border-color: var(--accent); background: var(--surface); }
-  .upload-zone.has-file {
-    border-color: var(--success);
-    border-style: solid;
-    background: var(--success-bg);
-  }
+  .upload-zone.has-file { border-color: var(--success); border-style: solid; background: var(--success-bg); }
   .upload-zone input { display: none; }
   .upload-label { font-size: 14px; font-weight: 700; display: block; margin-bottom: 2px; }
   .upload-hint { font-size: 12px; color: var(--text-muted); }
-  .upload-filename {
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 11px;
-    color: var(--rasta-green);
-    margin-top: 8px;
-    word-break: break-all;
-  }
+  .upload-filename { font-family: Consolas, "Courier New", monospace; font-size: 11px; color: var(--success); margin-top: 8px; word-break: break-all; }
 
-  /* Run button — flat solid green */
-  .run-btn {
-    width: 100%;
-    padding: 12px;
-    background: var(--rasta-green);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  .run-btn { width: 100%; padding: 12px; background: var(--success); color: #fff; border: none; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
   .run-btn:hover { background: #5a8a5d; }
   .run-btn:disabled { background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border); }
 
-  /* Status */
   .status-bar { display: none; margin-bottom: 14px; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; }
   .status-bar.visible { display: block; }
   .status-step { padding: 4px 0; font-size: 13px; }
-  .status-step::before { display: inline-block; width: 16px; }
-  .status-step.running::before { content: "..."; color: var(--rasta-gold); font-weight: bold; }
-  .status-step.done::before { content: "OK"; color: var(--rasta-green); font-weight: bold; font-size: 11px; }
-  .status-step.error::before { content: "X"; color: var(--rasta-red); font-weight: bold; }
+  .status-step::before { display: inline-block; width: 22px; }
+  .status-step.running::before { content: "..."; color: var(--accent); font-weight: bold; }
+  .status-step.done::before { content: "OK"; color: var(--success); font-weight: bold; font-size: 11px; }
+  .status-step.error::before { content: "X"; color: var(--danger); font-weight: bold; }
 
-  /* Confirm */
-  .confirm-box {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--rasta-gold);
-    border-radius: 6px;
-    padding: 16px;
-    margin-bottom: 14px;
-    box-shadow: var(--shadow);
-  }
+  .confirm-box { display: none; background: var(--surface); border: 1px solid var(--accent); border-radius: 6px; padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
   .confirm-box.visible { display: block; }
-  .confirm-box h3 { font-size: 14px; margin-bottom: 10px; color: var(--rasta-gold); }
-  .confirm-detail {
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 12px;
-    line-height: 1.6;
-    margin-bottom: 12px;
-    color: var(--text-muted);
-  }
+  .confirm-box h3 { font-size: 14px; margin-bottom: 10px; color: var(--accent); }
+  .confirm-detail { font-family: Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.6; margin-bottom: 12px; color: var(--text-muted); }
   .confirm-detail span { color: var(--text); }
-  .confirm-match { color: var(--rasta-green); font-weight: 700; font-size: 13px; margin-bottom: 12px; display: block; }
+  .confirm-match { color: var(--success); font-weight: 700; font-size: 13px; margin-bottom: 12px; display: block; }
   .confirm-btns { display: flex; gap: 8px; }
-  .confirm-btns button {
-    padding: 8px 20px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .btn-yes { background: var(--rasta-green); color: #fff; border-color: var(--rasta-green); }
+  .confirm-btns button { padding: 8px 20px; border-radius: 4px; border: 1px solid var(--border); font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-yes { background: var(--success); color: #fff; border-color: var(--success); }
   .btn-yes:hover { background: #5a8a5d; }
   .btn-no { background: var(--surface); color: var(--text); }
   .btn-no:hover { background: var(--surface-2); }
 
-  /* Results */
   .results { display: none; }
   .results.visible { display: block; }
   .results-summary { display: flex; gap: 8px; margin-bottom: 18px; }
-  .stat-card {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 14px 8px;
-    text-align: center;
-  }
-  .stat-value {
-    font-size: 26px;
-    font-weight: 700;
-    font-family: Consolas, "Courier New", monospace;
-  }
-  .stat-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 2px;
-    font-weight: 600;
-  }
-  .stat-card.green .stat-value { color: var(--rasta-green); }
-  .stat-card.red .stat-value { color: var(--rasta-red); }
+  .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 14px 8px; text-align: center; }
+  .stat-value { font-size: 26px; font-weight: 700; font-family: Consolas, "Courier New", monospace; }
+  .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; font-weight: 600; }
+  .stat-card.green .stat-value { color: var(--success); }
+  .stat-card.red .stat-value { color: var(--danger); }
 
   .disc-section { margin-bottom: 12px; }
-  .disc-category {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--rasta-gold);
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 4px;
-  }
-  .disc-item {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 10px;
-    padding: 8px 0;
-    font-size: 13px;
-    border-bottom: 1px solid var(--surface-2);
-    align-items: center;
-  }
+  .disc-category { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); padding: 8px 0; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .disc-item { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--surface-2); align-items: center; }
   .disc-name { font-weight: 600; }
-  .disc-num {
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 12px;
-    text-align: right;
-    min-width: 50px;
-    color: var(--text-muted);
-  }
-  .disc-variance {
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 12px;
-    font-weight: 700;
-    min-width: 40px;
-    text-align: right;
-  }
-  .disc-variance.positive { color: var(--rasta-green); }
-  .disc-variance.negative { color: var(--rasta-red); }
-  .all-match-banner {
-    text-align: center;
-    padding: 32px 16px;
-    font-size: 18px;
-    color: var(--rasta-green);
-    font-weight: 700;
-  }
+  .disc-num { font-family: Consolas, "Courier New", monospace; font-size: 12px; text-align: right; min-width: 50px; color: var(--text-muted); }
+  .disc-variance { font-family: Consolas, "Courier New", monospace; font-size: 12px; font-weight: 700; min-width: 40px; text-align: right; }
+  .disc-variance.positive { color: var(--success); }
+  .disc-variance.negative { color: var(--danger); }
+  .all-match-banner { text-align: center; padding: 32px 16px; font-size: 18px; color: var(--success); font-weight: 700; }
 
   .whatsapp-section { margin-top: 18px; }
-  .whatsapp-preview {
-    background: var(--surface-2);
-    border-radius: 4px;
-    padding: 12px;
-    font-family: Consolas, "Courier New", monospace;
-    font-size: 12px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    color: var(--text);
-    max-height: 200px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-    border: 1px solid var(--border);
-  }
-  .copy-btn {
-    padding: 8px 18px;
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .copy-btn:hover { background: var(--surface-2); border-color: var(--rasta-gold); }
-  .copy-btn.copied { background: var(--rasta-green); color: #fff; border-color: var(--rasta-green); }
+  .whatsapp-preview { background: var(--surface-2); border-radius: 4px; padding: 12px; font-family: Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap; color: var(--text); max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid var(--border); }
+  .copy-btn { padding: 8px 18px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .copy-btn:hover { background: var(--surface-2); border-color: var(--accent); }
+  .copy-btn.copied { background: var(--success); color: #fff; border-color: var(--success); }
 
-  .error-box {
-    display: none;
-    background: var(--danger-bg);
-    border: 1px solid var(--danger);
-    border-radius: 4px;
-    padding: 12px;
-    margin-bottom: 14px;
-    font-size: 13px;
-    color: var(--danger);
-  }
+  .error-box { display: none; background: var(--danger-bg); border: 1px solid var(--danger); border-radius: 4px; padding: 12px; margin-bottom: 14px; font-size: 13px; color: var(--danger); }
   .error-box.visible { display: block; }
 
-  .reset-btn {
-    display: none;
-    margin-top: 18px;
-    padding: 8px 18px;
-    background: var(--surface);
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
+  .reset-btn { display: none; margin-top: 18px; padding: 8px 18px; background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; }
   .reset-btn.visible { display: inline-block; }
-  .reset-btn:hover { color: var(--text); border-color: var(--rasta-gold); }
+  .reset-btn:hover { color: var(--text); border-color: var(--accent); }
 
-  /* Loading overlay — static, no animations */
-  .loading-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 1000;
-    background: rgba(26, 26, 26, 0.92);
-    align-items: center;
-    justify-content: center;
-  }
+  .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; background: rgba(26, 26, 26, 0.92); align-items: center; justify-content: center; }
   .loading-overlay.visible { display: flex; }
-  .loading-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--rasta-gold);
-    border-radius: 4px;
-    padding: 20px 28px;
-    box-shadow: 0 4px 12px rgba(60, 40, 10, 0.15);
-    text-align: center;
-  }
+  .loading-box { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 4px; padding: 20px 28px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); text-align: center; }
   .loading-text { font-size: 15px; font-weight: 600; color: var(--text); }
 </style>
 </head>
 <body>
 
-<div class="stripe-top"></div>
+<div class="stripe"></div>
 
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-box">
-    <div class="loading-text" id="loadingText">Checking inventory...</div>
-  </div>
+  <div class="loading-box"><div class="loading-text" id="loadingText">Checking inventory...</div></div>
 </div>
 
 <div class="container">
   <div class="header">
-    <h1><span class="accent-r">Inventory</span> <span class="accent-g">Check</span></h1>
+    <h1><span class="a">Inventory</span> Check</h1>
     <p>Upload expected + actual sheets. Get discrepancies back instantly.</p>
   </div>
 
@@ -391,12 +151,6 @@
 
   <div class="card">
     <div class="card-title">Upload Files</div>
-    <div class="template-download">
-      <a href="inventory-sheet.docx" download class="download-link">
-        Download blank actual sheet template (.docx)
-      </a>
-      <span class="download-hint">Print this template and use it for your physical counts. Fill in the dates at the top of each page before starting a new cycle.</span>
-    </div>
     <div class="upload-grid">
       <label class="upload-zone" id="expectedZone">
         <input type="file" accept=".pdf" id="expectedFile" />
@@ -438,542 +192,502 @@
   <button class="reset-btn" id="resetBtn">Start over</button>
 </div>
 
-<div class="stripe-bot"></div>
+<div class="stripe"></div>
 
 <script>
-let expectedB64=null,actualB64=null,expectedBytes=null,pass1Result=null;
-const MODEL="claude-opus-4-7";
-const $=id=>document.getElementById(id);
-const apiKeyInput=$("apiKey"),expectedFile=$("expectedFile"),actualFile=$("actualFile"),
-  expectedZone=$("expectedZone"),actualZone=$("actualZone"),expectedName=$("expectedName"),actualName=$("actualName"),
-  runBtn=$("runBtn"),statusBar=$("statusBar"),confirmBox=$("confirmBox"),confirmDetail=$("confirmDetail"),
-  confirmMatch=$("confirmMatch"),btnYes=$("btnYes"),btnNo=$("btnNo"),errorBox=$("errorBox"),results=$("results"),
-  resultsSummary=$("resultsSummary"),resultsBody=$("resultsBody"),whatsappPreview=$("whatsappPreview"),
-  copyBtn=$("copyBtn"),resetBtn=$("resetBtn"),loadingOverlay=$("loadingOverlay"),loadingText=$("loadingText");
+// ─────────────────────────────────────────────────────────────────────────────
+// Faithful port of the working Python check_inventory.py — same two-pass
+// architecture, same prompts, same parsing approach. JS-side conveniences:
+// pdf.js extracts page 1 of the actual sheet for Pass 1 (matches the Python
+// pypdf trimming), localStorage holds the API key, results render in the page
+// instead of being written to disk.
+// ─────────────────────────────────────────────────────────────────────────────
 
-const urlParams=new URLSearchParams(window.location.search);
-const urlKey=urlParams.get("key");
-if(urlKey&&urlKey.startsWith("sk-ant-")){localStorage.setItem("anthropic_api_key",urlKey);window.history.replaceState({},"",window.location.pathname);}
-const savedKey=localStorage.getItem("anthropic_api_key");
-if(savedKey){apiKeyInput.value=savedKey;}
+const MODEL = "claude-opus-4-7";
 
-function updateRunBtn(){
-  const hasKey=apiKeyInput.value.trim().startsWith("sk-ant-");
-  runBtn.disabled=!(hasKey&&expectedB64&&actualB64);
-  if(!hasKey&&expectedB64&&actualB64){showError("No API key found. Ask Patrick for the setup link.");}
+let expectedB64 = null, actualB64 = null, actualBytes = null, pass1Result = null;
+
+const $ = id => document.getElementById(id);
+const apiKeyInput = $("apiKey"), expectedFile = $("expectedFile"), actualFile = $("actualFile"),
+      expectedZone = $("expectedZone"), actualZone = $("actualZone"),
+      expectedName = $("expectedName"), actualName = $("actualName"),
+      runBtn = $("runBtn"), statusBar = $("statusBar"),
+      confirmBox = $("confirmBox"), confirmDetail = $("confirmDetail"), confirmMatch = $("confirmMatch"),
+      btnYes = $("btnYes"), btnNo = $("btnNo"),
+      errorBox = $("errorBox"), results = $("results"),
+      resultsSummary = $("resultsSummary"), resultsBody = $("resultsBody"),
+      whatsappPreview = $("whatsappPreview"), copyBtn = $("copyBtn"), resetBtn = $("resetBtn"),
+      loadingOverlay = $("loadingOverlay"), loadingText = $("loadingText");
+
+// API key handling — URL param OR localStorage. Setup link looks like:
+//   https://your.github.io/inventory-check/?key=sk-ant-...
+// Open it once on a device; the key persists in that browser.
+const urlParams = new URLSearchParams(window.location.search);
+const urlKey = urlParams.get("key");
+if (urlKey && urlKey.startsWith("sk-ant-")) {
+  localStorage.setItem("anthropic_api_key", urlKey);
+  window.history.replaceState({}, "", window.location.pathname);
 }
-function fileToBase64(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=()=>j(new Error("Read failed"));rd.readAsDataURL(f);})}
-function fileToArrayBuffer(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.onerror=()=>j(new Error("Read failed"));rd.readAsArrayBuffer(f);})}
-expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){const f=expectedFile.files[0];expectedB64=await fileToBase64(f);expectedBytes=await fileToArrayBuffer(f);expectedName.textContent=f.name;expectedZone.classList.add("has-file");}updateRunBtn();});
-actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64=await fileToBase64(actualFile.files[0]);actualName.textContent=actualFile.files[0].name;actualZone.classList.add("has-file");}updateRunBtn();});
+const savedKey = localStorage.getItem("anthropic_api_key");
+if (savedKey) apiKeyInput.value = savedKey;
 
-let statusSteps=[];
-function addStatus(t,s="running"){statusSteps.push({text:t,state:s});renderStatus();return statusSteps.length-1;}
-function updateStatus(i,s){statusSteps[i].state=s;renderStatus();}
-function renderStatus(){statusBar.classList.add("visible");statusBar.innerHTML=statusSteps.map(s=>`<div class="status-step ${s.state}">${s.text}</div>`).join("");}
-function showError(m){errorBox.textContent=m;errorBox.classList.add("visible");}
-
-function showLoading(msg){loadingText.textContent=(msg||"Checking inventory")+"...";loadingOverlay.classList.add("visible");}
-function hideLoading(){loadingOverlay.classList.remove("visible");}
-
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-
-async function callClaude(key,messages,maxTokens=4096,onWait){
-  for(let attempt=1;attempt<=4;attempt++){
-    let resp;
-    try{
-      resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,messages})});
-    }
-    catch(e){throw new Error("Network error: "+e.message+". Try disabling ad blockers or use Chrome.");}
-    if(resp.ok){return await resp.json();}
-    // 429 = rate limit. Honor Retry-After header (seconds) or fall back to 60s.
-    if(resp.status===429&&attempt<4){
-      const ra=parseInt(resp.headers.get("retry-after")||"60",10);
-      const waitSec=Math.max(5,Math.min(ra,90));
-      if(onWait)onWait(waitSec,attempt);
-      await sleep(waitSec*1000);
-      continue;
-    }
-    const e=await resp.json().catch(()=>({}));
-    throw new Error(e?.error?.message||`API error ${resp.status}`);
-  }
-  throw new Error("Rate limit retries exhausted. Wait a minute and try again.");
-}
-function extractText(r){return r.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();}
-function parseJSON(raw){
-  let c=raw;
-  if(c.startsWith("```")){c=c.replace(/^```json?\s*/i,"").replace(/```\s*$/,"");}
-  // Strip control chars (line breaks etc.) that may have leaked into string values
-  c=c.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
-  try{return JSON.parse(c);}catch{}
-  // Trailing comma cleanup
-  let f=c.replace(/,(\s*[}\]])/g,"$1");
-  try{return JSON.parse(f);}catch{}
-  // Repair unescaped double quotes inside string values.
-  // Heuristic: a " is "structural" if followed by : , } ] or whitespace+one-of-those, or end-of-string,
-  // OR preceded by such tokens (opening quote). Any other " inside a string we replace with '.
-  // Walk char by char tracking whether we're inside a string.
-  let repaired = "";
-  let inString = false;
-  for(let i=0;i<f.length;i++){
-    const ch = f[i];
-    const prev = i>0 ? f[i-1] : "";
-    if(ch === '"' && prev !== '\\'){
-      if(!inString){
-        // Opening quote
-        inString = true;
-        repaired += ch;
-      } else {
-        // We're inside a string. Is this a real closing quote?
-        // Look ahead, skipping whitespace, for a structural char.
-        let j = i+1;
-        while(j<f.length && /\s/.test(f[j])) j++;
-        const next = f[j] || "";
-        if(next === ":" || next === "," || next === "}" || next === "]" || j>=f.length){
-          inString = false;
-          repaired += ch;
-        } else {
-          // Embedded quote inside a string — replace with apostrophe
-          repaired += "'";
-        }
-      }
-    } else {
-      repaired += ch;
-    }
-  }
-  try{return JSON.parse(repaired);}catch{}
-  // Last resort: close unclosed brackets / strip trailing partial entries
-  let fixed=repaired;
-  const opens=(fixed.match(/\[/g)||[]).length;
-  const closes=(fixed.match(/\]/g)||[]).length;
-  const openBraces=(fixed.match(/\{/g)||[]).length;
-  const closeBraces=(fixed.match(/\}/g)||[]).length;
-  fixed=fixed.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"]*$/, "");
-  fixed=fixed.replace(/,\s*$/, "");
-  for(let i=0;i<opens-closes;i++) fixed+="]";
-  for(let i=0;i<openBraces-closeBraces;i++) fixed+="}";
-  try{return JSON.parse(fixed);}catch(e){
-    // Log raw output to console for debugging
-    console.error("JSON parse failed. Raw model output:", raw);
-    console.error("After repair attempts:", fixed);
-    throw new Error("JSON Parse error: "+e.message);
+function updateRunBtn() {
+  const hasKey = apiKeyInput.value.trim().startsWith("sk-ant-");
+  runBtn.disabled = !(hasKey && expectedB64 && actualB64);
+  if (!hasKey && expectedB64 && actualB64) {
+    showError("No API key found. Open the setup link Patrick sent you (it has ?key=... in the URL).");
   }
 }
 
-const PASS1_PROMPT=`You are looking at PAGE 1 of a multi-page physical inventory pack sheet. The first row contains date headers (one column per day, ~14 days). The leftmost column is the item-name column and is NOT a data column.
+function fileToBase64(f) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.onerror = () => rej(new Error("Read failed"));
+    r.readAsDataURL(f);
+  });
+}
+function fileToArrayBuffer(f) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = () => rej(new Error("Read failed"));
+    r.readAsArrayBuffer(f);
+  });
+}
+
+expectedFile.addEventListener("change", async () => {
+  if (expectedFile.files[0]) {
+    expectedB64 = await fileToBase64(expectedFile.files[0]);
+    expectedName.textContent = expectedFile.files[0].name;
+    expectedZone.classList.add("has-file");
+  }
+  updateRunBtn();
+});
+actualFile.addEventListener("change", async () => {
+  if (actualFile.files[0]) {
+    const f = actualFile.files[0];
+    actualB64 = await fileToBase64(f);
+    actualBytes = await fileToArrayBuffer(f);
+    actualName.textContent = f.name;
+    actualZone.classList.add("has-file");
+  }
+  updateRunBtn();
+});
+
+// ── Status bar ───────────────────────────────────────────────────────────────
+let statusSteps = [];
+function addStatus(text, state = "running") {
+  statusSteps.push({ text, state });
+  renderStatus();
+  return statusSteps.length - 1;
+}
+function updateStatus(i, state) { statusSteps[i].state = state; renderStatus(); }
+function renderStatus() {
+  statusBar.classList.add("visible");
+  statusBar.innerHTML = statusSteps.map(s => `<div class="status-step ${s.state}">${s.text}</div>`).join("");
+}
+function showError(m) { errorBox.textContent = m; errorBox.classList.add("visible"); }
+function showLoading(msg) { loadingText.textContent = (msg || "Checking inventory") + "..."; loadingOverlay.classList.add("visible"); }
+function hideLoading() { loadingOverlay.classList.remove("visible"); }
+
+// ── Page-1 extraction of the actual PDF (mirrors Python's first_page_pdf_block)
+// We use pdf.js to render page 1 onto a canvas, then re-encode that single
+// page as a tiny new PDF that we send to Pass 1. This drops Pass 1's input
+// from ~12 pages to 1 page, matching the Python script's behavior.
+async function extractPage1AsPdfBase64(arrayBuffer) {
+  if (typeof pdfjsLib === "undefined") throw new Error("PDF library not loaded");
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  const ctx = canvas.getContext("2d");
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  // Convert canvas to a one-page PDF using jsPDF? No — we don't want the dep.
+  // Instead, send the canvas as a PNG image. Claude accepts images directly,
+  // and a single rendered page-1 image is exactly what Pass 1 needs.
+  return canvas.toDataURL("image/png").split(",")[1];
+}
+
+// ── JSON parser with Python-equivalent fallbacks (Python parse_json_response) ─
+function parseJSONResponse(raw) {
+  let text = raw.trim();
+  // Strip markdown code fences
+  if (text.startsWith("```")) {
+    text = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+  }
+  // Attempt 1: as-is
+  try { return JSON.parse(text); } catch {}
+  // Attempt 2: remove trailing commas before } or ]
+  let fixed = text.replace(/,(\s*[}\]])/g, "$1");
+  try { return JSON.parse(fixed); } catch {}
+  // Attempt 3: strip control chars that may have leaked into strings
+  fixed = fixed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+  try { return JSON.parse(fixed); } catch {}
+  // Attempt 4: close any unclosed brackets/braces (fallback for truncation)
+  let close = fixed;
+  const opens = (close.match(/\[/g) || []).length, closes = (close.match(/\]/g) || []).length;
+  const ob = (close.match(/\{/g) || []).length, cb = (close.match(/\}/g) || []).length;
+  close = close.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"]*$/, "").replace(/,\s*$/, "");
+  for (let i = 0; i < opens - closes; i++) close += "]";
+  for (let i = 0; i < ob - cb; i++) close += "}";
+  try { return JSON.parse(close); } catch (e) {
+    console.error("JSON parse failed. Raw:", raw);
+    throw new Error("JSON Parse error: " + e.message);
+  }
+}
+
+// ── Anthropic API call ───────────────────────────────────────────────────────
+async function callClaude(key, messages, maxTokens) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${resp.status}`);
+  }
+  return await resp.json();
+}
+function extractText(r) {
+  return r.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
+}
+
+// ── Prompts (verbatim from working Python) ────────────────────────────────────
+const PASS1_PROMPT = `You are looking at PAGE 1 of a multi-page physical inventory pack sheet. The first row contains date headers (one column per day, ~14 days). The leftmost column is the item-name column and is NOT a data column.
 
 Also attached is the EXPECTED inventory PDF for a single date — read its date.
 
 Your job:
 1. Read the target date from the EXPECTED PDF and normalize it to YYYY-MM-DD.
 2. On page 1 of the actual sheet, look ONLY at the top date-header row. Count the data columns from left to right (do NOT count the item-name column). Find which data-column index (1-based) holds the target date.
-3. Headers are written as DAY NUMBERS ONLY (e.g. "27, 28, 29, 30, 1, 2, 3..."). They do NOT show month or year. Use the sequence to determine which month each day belongs to:
-   - When the numbers decrease (e.g. 30 then 1), that is a month boundary.
-   - Days before the boundary are the previous month. Days after are the next month.
-   - Example: "27, 28, 29, 30, 1, 2, 3" means 27-30 are one month and 1-3 are the next.
-4. TRUST THE EXPECTED PDF for the month and year. If the expected PDF says "May 3 2026" and you see a "3" after a month boundary in the sequence, that IS May 3. You do NOT need to independently verify the month or year from the sheet — the sheet only shows day numbers and that is normal.
-5. Set found=true as long as the day number matches in the correct position relative to the month boundary.
+3. Note: dates may be written as just a day number (e.g. "27", "28", "29") or as day/month. Use the sequence to disambiguate — if you see "27 28 29 30 1 2 3" the "1" is the next month's 1st, not January.
+
+If you cannot confidently identify the column, set found=false and explain. Do NOT guess. Better to fail loudly than match the wrong column.
 
 Respond ONLY with JSON, no prose, no markdown:
 
 {
-  "expected_date_raw": "string",
+  "expected_date_raw": "string (date as it appears on the expected PDF)",
   "target_date": "YYYY-MM-DD",
   "found": true | false,
-  "column_index": number | null,
+  "column_index": number (1-based, e.g. 3 means the 3rd data column) | null,
   "total_data_columns": number,
-  "column_header_raw": "string",
-  "all_headers_raw": ["list"],
-  "note": "string"
+  "column_header_raw": "string (what was written in that header cell, e.g. '29')",
+  "all_headers_raw": ["list", "of", "all", "header", "values", "left-to-right"],
+  "note": "string (any caveats; explanation if found=false)"
 }`;
 
-// PASS A (deterministic): Extract items from the typed expected PDF using pdf.js.
-// No AI call. Excel-exported PDFs have real extractable text; we just need to walk
-// the text items per page, group them into rows by Y-coordinate, and parse each row
-// as either "name <quantity>" or a category header.
-async function extractExpectedItems(arrayBuffer){
-  if(typeof pdfjsLib === "undefined"){
-    throw new Error("PDF library not loaded. Reload the page and try again.");
-  }
-  const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-  const items = [];
-  let currentCategory = "OTHER";
+function pass2Prompt(colIndex, colHeader, targetDate) {
+  return `You are an inventory auditor. You have two inputs:
 
-  for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
-    const page = await pdf.getPage(pageNum);
-    const content = await page.getTextContent();
+1. The EXPECTED PDF — a single-date inventory sheet listing items and the expected quantity for each.
+2. The ACTUAL sheet — a multi-page physical pack sheet with ~14 day-columns.
 
-    // Group text items by row using Y-coordinate (PDF Y is from the bottom).
-    // Items on the same visual line have nearly equal Y values.
-    const rows = new Map();
-    for(const it of content.items){
-      if(!it.str || !it.str.trim()) continue;
-      // Round Y to nearest 2 units to tolerate slight variation
-      const y = Math.round(it.transform[5] / 2) * 2;
-      if(!rows.has(y)) rows.set(y, []);
-      rows.get(y).push({x: it.transform[4], text: it.str});
+We have ALREADY identified the correct column on the actual sheet.
+**Use data column #${colIndex} (1-based, NOT counting the item-name column).**
+The header for that column reads: "${colHeader}".
+The target date is: ${targetDate}.
+Apply this same column index on EVERY page of the actual sheet.
+
+IMPORTANT RULES for reading the actual sheet:
+- The leftmost column (item names) is NOT a data column. Skip it when counting.
+- Some rows are SECTION HEADERS (e.g. "HYBRIDS", "INDICA", "SATIVA", "THE 100", "VAPE — KITS", "GIFTS", etc.). These are categories, not items — do NOT treat them as items, but DO track the current category for context.
+- Many cells will be blank. Blank = actual quantity is null (treat as 0 for comparison only if the expected quantity is also 0; otherwise report as "missing actual" with actual=null).
+- Handwriting may be ambiguous (e.g. "0" vs "O", "2" vs "Z", "1" vs "/"). If you're unsure, record your best guess and add a note.
+
+Your job:
+- Extract every item listed in the EXPECTED PDF with its expected quantity.
+- For each, find the matching row on the ACTUAL sheet (across all pages) and read the value in column #${colIndex} only.
+- Match items tolerantly — same item may have minor naming differences.
+- Use category context to disambiguate items that appear in multiple sections (e.g. "Pineapple Express" can appear under both SATIVA and another category).
+- Also list any items present on the actual sheet (in column #${colIndex}) that are NOT on the expected PDF, as status="unexpected".
+
+Status flags:
+  "match"       -> quantities equal
+  "short"       -> actual < expected
+  "over"        -> actual > expected
+  "missing"     -> on expected, no value in target column on actual
+  "unexpected"  -> value in target column on actual, not on expected
+
+CRITICAL JSON FORMATTING RULES:
+- Output MUST be valid JSON. No markdown, no code fences, no commentary before or after.
+- Keep "note" fields short (max ~10 words). Empty string "" if nothing to note.
+- In note fields, do NOT use double quotes. Use single quotes if you must quote something. Example: GOOD: "note": "looks like '0' or 'O'"  BAD: "note": "looks like "0" or "O""
+- Do NOT use any control characters (newlines, tabs) inside string values. Keep notes on a single line.
+- No trailing commas after the last item in arrays or objects.
+- Every property name must be enclosed in double quotes.
+
+Respond ONLY with JSON, no prose, no markdown:
+
+{
+  "report_date": "${targetDate}",
+  "column_used": {
+    "index": ${colIndex},
+    "header_raw": "${colHeader}"
+  },
+  "items": [
+    {
+      "item": "string",
+      "category": "string (e.g. HYBRIDS, INDICA, etc., or empty)",
+      "expected": number_or_null,
+      "actual": number_or_null,
+      "difference": number_or_null,
+      "status": "match" | "short" | "over" | "missing" | "unexpected",
+      "note": "string"
     }
+  ],
+  "summary": {
+    "total_items": number,
+    "discrepancies": number,
+    "ambiguous": number
+  }
+}`;
+}
 
-    // Sort rows top-to-bottom (higher Y = top of page in PDF coords)
-    const sortedYs = Array.from(rows.keys()).sort((a, b) => b - a);
+// ── Output formatting (mirrors Python format_for_whatsapp) ───────────────────
+function formatWhatsApp(report) {
+  const s = report.summary || {};
+  let datePretty = report.report_date || "";
+  try {
+    const d = new Date(datePretty + "T00:00:00");
+    datePretty = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {}
+  const total = s.total_items || 0;
+  const disc = s.discrepancies || 0;
+  if (disc === 0) return `Inventory Check — ${datePretty}\nAll ${total} items match.`;
 
-    for(const y of sortedYs){
-      // Sort cells in row left-to-right by X
-      const cells = rows.get(y).sort((a, b) => a.x - b.x);
-      const tokens = cells.map(c => c.text.trim()).filter(Boolean);
-      if(tokens.length === 0) continue;
+  const lines = [`Inventory Check — ${datePretty}`, `${disc} discrepancies out of ${total} items`, ""];
+  const byCategory = {}, categoryOrder = [];
+  for (const item of (report.items || [])) {
+    if (item.status === "match") continue;
+    const cat = item.category || "Other";
+    if (!byCategory[cat]) { byCategory[cat] = []; categoryOrder.push(cat); }
+    byCategory[cat].push(item);
+  }
+  for (const cat of categoryOrder) {
+    lines.push(cat);
+    for (const item of byCategory[cat]) {
+      const exp = item.expected != null ? item.expected : "-";
+      const act = item.actual != null ? item.actual : "-";
+      let varStr = "-";
+      if (item.expected != null && item.actual != null) {
+        const v = item.actual - item.expected;
+        varStr = (v >= 0 ? "+" : "") + v;
+      }
+      lines.push(`- ${item.item}: actual ${act}, expected ${exp}, variance ${varStr}`);
+    }
+    lines.push("");
+  }
+  return lines.join("\n").trimEnd();
+}
 
-      const joined = tokens.join(" ").trim();
-
-      // Skip pure page furniture / metadata rows
-      if(/^(page|pg)\s*\d+/i.test(joined)) continue;
-      if(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(joined)) continue; // date stamps
-      if(joined.length < 2) continue;
-
-      // The last token is potentially the quantity. Check if it parses as a positive integer.
-      const lastToken = tokens[tokens.length - 1];
-      const qtyMatch = lastToken.match(/^(\d+)$/);
-
-      if(qtyMatch){
-        const qty = parseInt(qtyMatch[1], 10);
-        if(qty <= 0) continue; // zero quantities = not on hand, skip
-        const nameTokens = tokens.slice(0, -1);
-        const name = nameTokens.join(" ").replace(/[^\w\s\-./]+/g, " ").replace(/\s+/g, " ").trim();
-        if(!name) continue;
-        // Skip rows that look like totals/subtotals
-        if(/^(total|subtotal|grand total|sum)$/i.test(name)) continue;
-        items.push({n: name, c: currentCategory, q: qty});
-      } else {
-        // No trailing integer → treat as a category header.
-        // Strategy: clean the text, then accept it if it matches a known cannabis category
-        // (case-insensitive) OR if it's a short, mostly-letter phrase that looks like a header.
-        const headerCandidate = joined.replace(/[^\w\s]+/g, " ").replace(/\s+/g, " ").trim();
-        if(!headerCandidate) continue;
-
-        const KNOWN_CATEGORIES = [
-          "INDICA","SATIVA","HYBRID","HYBRIDS",
-          "HASH","EDIBLES","PREROLLS","PRE ROLLS","PRE-ROLLS",
-          "CONCENTRATES","CONCENTRATE","FLOWER","FLOWERS",
-          "VAPES","CARTS","CARTRIDGES",
-          "TINCTURES","TOPICALS","ACCESSORIES",
-          "THE 100","THE100","100",
-          "OTHER","MISC"
-        ];
-        const upper = headerCandidate.toUpperCase();
-        const isKnown = KNOWN_CATEGORIES.some(c => upper === c || upper.startsWith(c + " ") || upper.endsWith(" " + c));
-        // Permissive header check: short (<=30 chars), mostly letters, no digits in the middle of words
-        const looksLikeHeader = headerCandidate.length <= 30 && /^[A-Za-z][A-Za-z0-9 ]*$/.test(headerCandidate) && headerCandidate.split(" ").length <= 4;
-
-        if(isKnown || looksLikeHeader){
-          currentCategory = upper;
+function renderResults(report) {
+  const s = report.summary || {};
+  const total = s.total_items || 0, disc = s.discrepancies || 0, match = total - disc;
+  resultsSummary.innerHTML = `
+    <div class="stat-card green"><div class="stat-value">${match}</div><div class="stat-label">Match</div></div>
+    <div class="stat-card ${disc > 0 ? "red" : "green"}"><div class="stat-value">${disc}</div><div class="stat-label">Discrepancies</div></div>
+    <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>`;
+  const flagged = (report.items || []).filter(i => i.status !== "match");
+  if (!flagged.length) {
+    resultsBody.innerHTML = '<div class="all-match-banner">All items match</div>';
+  } else {
+    const byCat = {}, order = [];
+    for (const i of flagged) {
+      const c = i.category || "Other";
+      if (!byCat[c]) { byCat[c] = []; order.push(c); }
+      byCat[c].push(i);
+    }
+    let html = "";
+    for (const c of order) {
+      html += `<div class="disc-section"><div class="disc-category">${c}</div>`;
+      for (const i of byCat[c]) {
+        const exp = i.expected != null ? i.expected : "-";
+        const act = i.actual != null ? i.actual : "-";
+        let v = "-", vc = "";
+        if (i.expected != null && i.actual != null) {
+          const d = i.actual - i.expected;
+          v = (d >= 0 ? "+" : "") + d;
+          vc = d > 0 ? "positive" : (d < 0 ? "negative" : "");
         }
-        // Otherwise skip — likely a wrapped row, comment, or noise
+        html += `<div class="disc-item"><span class="disc-name">${i.item}</span><span class="disc-num">exp ${exp}</span><span class="disc-num">act ${act}</span><span class="disc-variance ${vc}">${v}</span></div>`;
       }
+      html += "</div>";
     }
+    resultsBody.innerHTML = html;
   }
-
-  console.log("Pass A categories detected during walk:", Array.from(new Set(items.map(i => i.c))));
-
-  // Dedupe by normalized name (last write wins on duplicates — usually the totals match anyway)
-  const seen = new Map();
-  for(const it of items){
-    const key = it.n.toLowerCase().replace(/[^a-z0-9]+/g, "");
-    if(!seen.has(key)) seen.set(key, it);
-  }
-  const result = Array.from(seen.values());
-
-  // Diagnostic: per-category counts so we can see if hybrids etc. are present
-  const byCategory = {};
-  for(const it of result){ byCategory[it.c] = (byCategory[it.c]||0) + 1; }
-  console.log("Pass A items per category:", byCategory);
-
-  return result;
-}
-
-// PASS B: For a given list of expected item names, look each one up on the actual sheet
-// and return its value in column N. Bounded output = no truncation, no overshoot.
-function passBPrompt(ci,ch,td,namesList,allHeaders){
-  const namesJson = JSON.stringify(namesList);
-  const headers = Array.isArray(allHeaders) ? allHeaders : [];
-  const idx = ci - 1; // 0-based for array indexing
-  const leftHeader = idx > 0 ? headers[idx - 1] : null;
-  const rightHeader = idx < headers.length - 1 ? headers[idx + 1] : null;
-  const headersDisplay = headers.map((h, i) => i === idx ? `[${h}]` : h).join(" ");
-  // Compute the wrong-column headers (everything that isn't ours) so we can warn against them
-  const otherHeaders = headers.filter((_, i) => i !== idx);
-
-  return `Look up specific items on the ACTUAL inventory pack sheet and report the value in ONE specific column.
-
-ITEMS TO LOOK UP (exact list, in order):
-${namesJson}
-
-═══ TARGET COLUMN — READ THIS CAREFULLY ═══
-The target column is data-column #${ci} (1-based, skipping the leftmost item-name column). Its header reads exactly "${ch}". Date: ${td}.
-
-The complete header row of the actual sheet, left to right, looks like this (target in brackets):
-${headersDisplay}
-
-NEIGHBOR ANCHORS:
-- The column IMMEDIATELY TO THE LEFT of the target has header: ${leftHeader === null ? "(none — target is the leftmost data column)" : `"${leftHeader}"`}
-- The column IMMEDIATELY TO THE RIGHT of the target has header: ${rightHeader === null ? "(none — target is the rightmost data column)" : `"${rightHeader}"`}
-
-CRITICAL DRIFT CHECK: Before reading any cell, trace a vertical line from the cell up to the header row of that page and verify the header reads "${ch}". If the header above your cell reads any of these other values, you are in the WRONG column and must shift over: ${JSON.stringify(otherHeaders)}.
-
-The most common error is reading a column 1-3 positions to the LEFT of the target (yesterday's or earlier days' counts). If your readings seem systematically lower than expected, you have probably drifted left. Recount data columns from the leftmost data column and try again.
-
-═══ TASK ═══
-For EACH name in the list above (in order):
-1. Find the row on the actual sheet whose item name in the leftmost column matches that name. Match tolerantly: ignore case, whitespace, and punctuation. Handwritten names may differ slightly from typed names.
-2. Verify you are about to read the target column by checking that the header above the cell reads "${ch}", with "${leftHeader || 'nothing'}" to its immediate left and "${rightHeader || 'nothing'}" to its immediate right.
-3. Read the value in that cell.
-4. Output one entry: {"n":"<name from input list verbatim>","v":<integer_or_null>}.
-
-═══ READING RULES ═══
-- The target column header "${ch}" appears at the top of EVERY page. Re-anchor on each page; do not rely on pixel position.
-- If a cell is blank, "v" is null.
-- If column alignment is unclear or unreadable, "v" is null.
-- If you cannot find the named row, "v" is null.
-- Null is always better than a guess.
-
-═══ OUTPUT ═══
-Return EXACTLY ${namesList.length} entries, same order as input. Copy each "n" verbatim from the input list.
-
-OUTPUT FORMAT - flat array only:
-[{"n":"<input name>","v":<integer_or_null>}]
-
-CRITICAL JSON rules:
-- Output ONLY the JSON array. No prose, no markdown, no code fences.
-- All strings double-quoted. No trailing commas. No unescaped quotes.
-- Numbers are bare integers. Null is the bare token null.
-
-Example (3-item input):
-[
-{"n":"Cherry Cheesecake","v":4},
-{"n":"Death Rockstar","v":4},
-{"n":"Pink Venom","v":null}
-]`;}
-
-// Normalize an item name for matching: lowercase, collapse whitespace, strip punctuation except digits and letters
-function normName(s){return (s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
-
-// Compare expected list and actual list, build report
-function buildReport(expectedList, actualList, targetDate, columnIndex, columnHeader){
-  // Build actual map: normalized name -> value
-  const actualMap = new Map();
-  for(const e of actualList){ actualMap.set(normName(e.n), e.v); }
-  // Walk expected list, classify each item
-  const items = [];
-  let totalChecked = 0;
-  for(const e of expectedList){
-    const exp = e.q;
-    if(exp == null) continue; // skip items without quantity
-    totalChecked++;
-    const key = normName(e.n);
-    let act = actualMap.get(key);
-    let note = "";
-    // If exact normalized match failed, try fuzzy (substring both ways)
-    if(act === undefined){
-      for(const [ak, av] of actualMap){
-        if(ak.includes(key) || key.includes(ak)){ act = av; note = `fuzzy match: "${ak}"`; break; }
-      }
-    }
-    if(act === undefined){
-      items.push({item:e.n, category:e.c||"OTHER", expected:exp, actual:null, difference:null, status:"missing", note:"not found on actual sheet"});
-      continue;
-    }
-    if(act === null){
-      items.push({item:e.n, category:e.c||"OTHER", expected:exp, actual:null, difference:null, status:"missing", note:note||"cell blank or unreadable"});
-      continue;
-    }
-    if(act === exp) continue; // match - skip
-    const diff = act - exp;
-    items.push({item:e.n, category:e.c||"OTHER", expected:exp, actual:act, difference:diff, status: diff>0?"over":"short", note});
-  }
-  return {
-    report_date: targetDate,
-    column_used: {index: columnIndex, header_raw: columnHeader},
-    items,
-    summary: {total_items: totalChecked, discrepancies: items.length, ambiguous: items.filter(i=>i.note).length}
+  const wa = formatWhatsApp(report);
+  whatsappPreview.textContent = wa;
+  copyBtn.onclick = async () => {
+    await navigator.clipboard.writeText(wa);
+    copyBtn.textContent = "Copied!";
+    copyBtn.classList.add("copied");
+    setTimeout(() => { copyBtn.textContent = "Copy to clipboard"; copyBtn.classList.remove("copied"); }, 2000);
   };
+  results.classList.add("visible");
+  resetBtn.classList.add("visible");
 }
 
-function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\nAll ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
+// ── Main run handler ─────────────────────────────────────────────────────────
+runBtn.addEventListener("click", async () => {
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey || !expectedB64 || !actualB64) return;
 
-function renderResults(report){const s=report.summary||{};const t=s.total_items||0,d=s.discrepancies||0,m=t-d;
-  resultsSummary.innerHTML=`<div class="stat-card green"><div class="stat-value">${m}</div><div class="stat-label">Match</div></div><div class="stat-card ${d>0?"red":"green"}"><div class="stat-value">${d}</div><div class="stat-label">Discrepancies</div></div><div class="stat-card"><div class="stat-value">${t}</div><div class="stat-label">Total</div></div>`;
-  const flagged=(report.items||[]).filter(i=>i.status!=="match");
-  if(!flagged.length){resultsBody.innerHTML='<div class="all-match-banner">All items match</div>';}
-  else{const bc={},co=[];for(const i of flagged){const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}let h="";for(const c of co){h+=`<div class="disc-section"><div class="disc-category">${c}</div>`;for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-",vc="";if(i.expected!=null&&i.actual!=null){const diff=i.actual-i.expected;v=(diff>0?"+":"")+diff;vc=diff>0?"positive":"negative";}h+=`<div class="disc-item"><span class="disc-name">${i.item}</span><span class="disc-num">exp ${e}</span><span class="disc-num">act ${a}</span><span class="disc-variance ${vc}">${v}</span></div>`;}h+="</div>";}resultsBody.innerHTML=h;}
-  const wa=formatWhatsApp(report);whatsappPreview.textContent=wa;
-  copyBtn.onclick=async()=>{await navigator.clipboard.writeText(wa);copyBtn.textContent="Copied!";copyBtn.classList.add("copied");setTimeout(()=>{copyBtn.textContent="Copy to clipboard";copyBtn.classList.remove("copied");},2000);};
-  results.classList.add("visible");resetBtn.classList.add("visible");}
+  statusSteps = [];
+  statusBar.classList.remove("visible");
+  confirmBox.classList.remove("visible");
+  errorBox.classList.remove("visible");
+  results.classList.remove("visible");
+  resetBtn.classList.remove("visible");
+  runBtn.disabled = true;
 
-runBtn.addEventListener("click",async()=>{
-  const apiKey=apiKeyInput.value.trim();if(!apiKey||!expectedB64||!actualB64)return;
-  statusSteps=[];statusBar.classList.remove("visible");confirmBox.classList.remove("visible");errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");runBtn.disabled=true;
-  try{
-    const s1=addStatus("Pass 1: identifying today's column");showLoading("Reading the expected PDF");
-    const onRateWait=(sec,attempt)=>{showLoading(`Rate limited, waiting ${sec}s (attempt ${attempt})`);};
-    const p1=await callClaude(apiKey,[{role:"user",content:[{type:"text",text:"EXPECTED PDF (single-date):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL sheet (look at PAGE 1 only):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:PASS1_PROMPT}]}],1024,onRateWait);
-    pass1Result=parseJSON(extractText(p1));updateStatus(s1,"done");hideLoading();
-    if(!pass1Result.found){showError("Pass 1 failed: "+(pass1Result.note||"could not find date"));updateStatus(s1,"error");runBtn.disabled=false;return;}
-    confirmDetail.innerHTML=`Date from expected PDF: <span>${pass1Result.expected_date_raw} -> ${pass1Result.target_date}</span><br>Headers seen: <span>${(pass1Result.all_headers_raw||[]).join(", ")}</span>`;
-    confirmMatch.textContent=`Column #${pass1Result.column_index} of ${pass1Result.total_data_columns} - header reads '${pass1Result.column_header_raw}'`;
+  try {
+    // PASS 1 — page 1 of actual sheet only
+    const s1 = addStatus("Pass 1: locating today's column on page 1");
+    showLoading("Reading page 1 of the actual sheet");
+    const page1Png = await extractPage1AsPdfBase64(actualBytes);
+    const p1Resp = await callClaude(apiKey, [{
+      role: "user",
+      content: [
+        { type: "text", text: "EXPECTED PDF (single-date):" },
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data: expectedB64 } },
+        { type: "text", text: "ACTUAL sheet — PAGE 1 only:" },
+        { type: "image", source: { type: "base64", media_type: "image/png", data: page1Png } },
+        { type: "text", text: PASS1_PROMPT },
+      ],
+    }], 1024);
+    pass1Result = parseJSONResponse(extractText(p1Resp));
+    updateStatus(s1, "done");
+    hideLoading();
+
+    if (!pass1Result.found) {
+      showError("Pass 1 failed: " + (pass1Result.note || "could not find date"));
+      updateStatus(s1, "error");
+      runBtn.disabled = false;
+      return;
+    }
+
+    confirmDetail.innerHTML = `Date from expected PDF: <span>${pass1Result.expected_date_raw} -> ${pass1Result.target_date}</span><br>Headers seen: <span>${(pass1Result.all_headers_raw || []).join(", ")}</span>`;
+    confirmMatch.textContent = `Column #${pass1Result.column_index} of ${pass1Result.total_data_columns} - header reads '${pass1Result.column_header_raw}'`;
     confirmBox.classList.add("visible");
-    const confirmed=await new Promise(r=>{btnYes.onclick=()=>r(true);btnNo.onclick=()=>r(false);});
+
+    const confirmed = await new Promise(r => {
+      btnYes.onclick = () => r(true);
+      btnNo.onclick = () => r(false);
+    });
     confirmBox.classList.remove("visible");
-    if(!confirmed){addStatus("Aborted","done");runBtn.disabled=false;return;}
+    if (!confirmed) { addStatus("Aborted", "done"); runBtn.disabled = false; return; }
 
-    // Pass A: extract items from typed expected PDF using pdf.js (NO AI CALL)
-    const sA=addStatus("Pass A: extracting expected items");showLoading("Reading expected items");
-    let expectedList=null;
-    try{
-      expectedList = await extractExpectedItems(expectedBytes);
-      if(!Array.isArray(expectedList) || expectedList.length === 0){
-        throw new Error("No items found in expected PDF. Is it an Excel-exported typed PDF?");
-      }
-      console.log("Pass A extracted", expectedList.length, "items:", expectedList);
-    }catch(err){
-      updateStatus(sA,"error");
-      throw new Error("Pass A failed: "+err.message);
-    }
-    updateStatus(sA,"done");
+    // PASS 2 — full audit
+    const s2 = addStatus("Pass 2: extracting items across all pages");
+    showLoading("Running full audit");
+    const p2Resp = await callClaude(apiKey, [{
+      role: "user",
+      content: [
+        { type: "text", text: "EXPECTED inventory PDF (single-date):" },
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data: expectedB64 } },
+        { type: "text", text: "ACTUAL inventory PDF (all pages):" },
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data: actualB64 } },
+        { type: "text", text: pass2Prompt(pass1Result.column_index, pass1Result.column_header_raw, pass1Result.target_date) },
+      ],
+    }], 16384);
+    const report = parseJSONResponse(extractText(p2Resp));
+    updateStatus(s2, "done");
+    hideLoading();
+    renderResults(report);
 
-    // Pass B: look up the specific expected items in column N of actual sheet
-    // Defensive cleanup of Pass A output — drop blanks, zeros, non-integers, and duplicates.
-    // This protects Pass B from being asked to look up 100+ items when the real count is ~30.
-    const seen = new Set();
-    const cleaned = [];
-    for(const e of expectedList){
-      const name = (e.n||"").trim();
-      const qty = parseInt(e.q, 10);
-      if(!name) continue;
-      if(!Number.isFinite(qty) || qty <= 0) continue; // skip blanks, zeros, negatives, NaN
-      const key = normName(name);
-      if(seen.has(key)) continue; // dedupe
-      seen.add(key);
-      cleaned.push({n: name, c: e.c || "OTHER", q: qty});
-    }
-    expectedList = cleaned;
-    const lookupNames = expectedList.map(e => e.n);
-    if(lookupNames.length === 0){
-      throw new Error("No items with positive quantities found in expected sheet after cleanup");
-    }
-    if(lookupNames.length > 80){
-      console.warn(`Pass A returned ${lookupNames.length} items - more than expected. Proceeding anyway.`);
-    }
-    const sB=addStatus(`Pass B: looking up ${lookupNames.length} items in column #${pass1Result.column_index}`);showLoading("Looking up items");
-    const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date,lookupNames,pass1Result.all_headers_raw)}];
-    let actualList=null;
-    for(let attempt=1;attempt<=2;attempt++){
-      try{
-        const pB=await callClaude(apiKey,[{role:"user",content:passBContent}],2000,onRateWait);
-        actualList=parseJSON(extractText(pB));
-        if(!Array.isArray(actualList)) throw new Error("Pass B did not return an array");
-        console.log("Pass B returned", actualList.length, "items:", actualList);
-        break;
-      }catch(parseErr){
-        if(attempt===1){updateStatus(sB,"running");addStatus("Retrying Pass B - brief pause");showLoading("Waiting before retry");await sleep(15000);showLoading("Retrying");}
-        else{throw new Error("Pass B failed: "+parseErr.message);}
-      }
-    }
-    updateStatus(sB,"done");
-
-    // Compare in JS
-    const sC=addStatus("Comparing");
-    const report=buildReport(expectedList, actualList, pass1Result.target_date, pass1Result.column_index, pass1Result.column_header_raw);
-    updateStatus(sC,"done");
-    hideLoading();renderResults(report);
-  }catch(err){hideLoading();showError(err.message);if(statusSteps.length>0)updateStatus(statusSteps.length-1,"error");}
-  runBtn.disabled=false;
+  } catch (err) {
+    hideLoading();
+    showError(err.message);
+    if (statusSteps.length > 0) updateStatus(statusSteps.length - 1, "error");
+  }
+  runBtn.disabled = false;
 });
 
-resetBtn.addEventListener("click",()=>{
-  expectedB64=null;actualB64=null;expectedBytes=null;pass1Result=null;expectedFile.value="";actualFile.value="";
-  expectedName.textContent="";actualName.textContent="";expectedZone.classList.remove("has-file");actualZone.classList.remove("has-file");
-  statusSteps=[];statusBar.innerHTML="";statusBar.classList.remove("visible");confirmBox.classList.remove("visible");
-  errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");updateRunBtn();
+resetBtn.addEventListener("click", () => {
+  expectedB64 = null; actualB64 = null; actualBytes = null; pass1Result = null;
+  expectedFile.value = ""; actualFile.value = "";
+  expectedName.textContent = ""; actualName.textContent = "";
+  expectedZone.classList.remove("has-file"); actualZone.classList.remove("has-file");
+  statusSteps = []; statusBar.innerHTML = ""; statusBar.classList.remove("visible");
+  confirmBox.classList.remove("visible"); errorBox.classList.remove("visible");
+  results.classList.remove("visible"); resetBtn.classList.remove("visible");
+  updateRunBtn();
 });
 
-const quoteTextEl=$("quoteText"), quoteAuthorEl=$("quoteAuthor"),
-      quoteAnalysisEl=$("quoteAnalysis"), quoteRefreshBtn=$("quoteRefresh");
+// ── Motivational quote (cosmetic) ────────────────────────────────────────────
+const quoteTextEl = $("quoteText"), quoteAuthorEl = $("quoteAuthor"),
+      quoteAnalysisEl = $("quoteAnalysis"), quoteRefreshBtn = $("quoteRefresh");
 
-const QUOTES=[
-  {quote:"The only way to do great work is to love what you do.",author:"Steve Jobs"},
-  {quote:"It does not matter how slowly you go as long as you do not stop.",author:"Confucius"},
-  {quote:"Success is not final, failure is not fatal: it is the courage to continue that counts.",author:"Winston Churchill"},
-  {quote:"Believe you can and you're halfway there.",author:"Theodore Roosevelt"},
-  {quote:"The future belongs to those who believe in the beauty of their dreams.",author:"Eleanor Roosevelt"},
-  {quote:"It is during our darkest moments that we must focus to see the light.",author:"Aristotle"},
-  {quote:"The only impossible journey is the one you never begin.",author:"Tony Robbins"},
-  {quote:"Everything you've ever wanted is on the other side of fear.",author:"George Addair"},
-  {quote:"Hardships often prepare ordinary people for an extraordinary destiny.",author:"C.S. Lewis"},
-  {quote:"The best time to plant a tree was 20 years ago. The second best time is now.",author:"Chinese Proverb"},
-  {quote:"Don't watch the clock; do what it does. Keep going.",author:"Sam Levenson"},
-  {quote:"You are never too old to set another goal or to dream a new dream.",author:"C.S. Lewis"},
-  {quote:"The secret of getting ahead is getting started.",author:"Mark Twain"},
-  {quote:"I have not failed. I've just found 10,000 ways that won't work.",author:"Thomas Edison"},
-  {quote:"What lies behind us and what lies before us are tiny matters compared to what lies within us.",author:"Ralph Waldo Emerson"},
-  {quote:"A person who never made a mistake never tried anything new.",author:"Albert Einstein"},
-  {quote:"Your limitation - it's only your imagination.",author:"Unknown"},
-  {quote:"Great things never come from comfort zones.",author:"Unknown"},
-  {quote:"Dream it. Wish it. Do it.",author:"Unknown"},
-  {quote:"The harder you work for something, the greater you'll feel when you achieve it.",author:"Unknown"},
-  {quote:"Don't stop when you're tired. Stop when you're done.",author:"Unknown"},
-  {quote:"Wake up with determination. Go to bed with satisfaction.",author:"Unknown"},
-  {quote:"Little things make big days.",author:"Unknown"},
-  {quote:"It's going to be hard, but hard does not mean impossible.",author:"Unknown"},
-  {quote:"The man who moves a mountain begins by carrying away small stones.",author:"Confucius"},
-  {quote:"Strength does not come from physical capacity. It comes from an indomitable will.",author:"Mahatma Gandhi"},
-  {quote:"If you want to lift yourself up, lift up someone else.",author:"Booker T. Washington"},
-  {quote:"We may encounter many defeats but we must not be defeated.",author:"Maya Angelou"},
-  {quote:"Knowing is not enough; we must apply. Wishing is not enough; we must do.",author:"Johann Wolfgang von Goethe"},
-  {quote:"Imagine your life is perfect in every respect; what would it look like?",author:"Brian Tracy"},
-  {quote:"We generate fears while we sit. We overcome them by action.",author:"Dr. Henry Link"},
-  {quote:"The only place where success comes before work is in the dictionary.",author:"Vidal Sassoon"},
-  {quote:"Whether you think you can or think you can't, you're right.",author:"Henry Ford"},
-  {quote:"Security is mostly a superstition. Life is either a daring adventure or nothing.",author:"Helen Keller"},
-  {quote:"The question isn't who is going to let me; it's who is going to stop me.",author:"Ayn Rand"},
-  {quote:"The only person you are destined to become is the person you decide to be.",author:"Ralph Waldo Emerson"},
-  {quote:"Go confidently in the direction of your dreams. Live the life you have imagined.",author:"Henry David Thoreau"},
-  {quote:"When you reach the end of your rope, tie a knot in it and hang on.",author:"Franklin D. Roosevelt"},
-  {quote:"There is only one way to avoid criticism: do nothing, say nothing, and be nothing.",author:"Aristotle"},
-  {quote:"Stay hungry, stay foolish.",author:"Steve Jobs"}
+const QUOTES = [
+  { quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+  { quote: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
+  { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  { quote: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+  { quote: "It is during our darkest moments that we must focus to see the light.", author: "Aristotle" },
+  { quote: "The only impossible journey is the one you never begin.", author: "Tony Robbins" },
+  { quote: "Everything you've ever wanted is on the other side of fear.", author: "George Addair" },
+  { quote: "Hardships often prepare ordinary people for an extraordinary destiny.", author: "C.S. Lewis" },
+  { quote: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
+  { quote: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { quote: "You are never too old to set another goal or to dream a new dream.", author: "C.S. Lewis" },
+  { quote: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { quote: "I have not failed. I've just found 10,000 ways that won't work.", author: "Thomas Edison" },
+  { quote: "What lies behind us and what lies before us are tiny matters compared to what lies within us.", author: "Ralph Waldo Emerson" },
+  { quote: "A person who never made a mistake never tried anything new.", author: "Albert Einstein" },
+  { quote: "Great things never come from comfort zones.", author: "Unknown" },
+  { quote: "Don't stop when you're tired. Stop when you're done.", author: "Unknown" },
+  { quote: "Wake up with determination. Go to bed with satisfaction.", author: "Unknown" },
+  { quote: "The man who moves a mountain begins by carrying away small stones.", author: "Confucius" },
+  { quote: "Strength does not come from physical capacity. It comes from an indomitable will.", author: "Mahatma Gandhi" },
+  { quote: "We may encounter many defeats but we must not be defeated.", author: "Maya Angelou" },
+  { quote: "Whether you think you can or think you can't, you're right.", author: "Henry Ford" },
+  { quote: "Stay hungry, stay foolish.", author: "Steve Jobs" },
 ];
 
-async function analyzeQuote(quote, author){
-  const key=apiKeyInput.value.trim();
-  if(!key){quoteAnalysisEl.textContent="No API key set. Visit this page with ?key=sk-ant-... to enable analysis.";quoteAnalysisEl.classList.remove("loading");return;}
-  quoteAnalysisEl.textContent="Breaking it down...";
+async function analyzeQuote(quote) {
+  const key = apiKeyInput.value.trim();
+  if (!key) { quoteAnalysisEl.textContent = "No API key set."; quoteAnalysisEl.classList.remove("loading"); return; }
+  quoteAnalysisEl.textContent = "Breaking it down...";
   quoteAnalysisEl.classList.add("loading");
-  try{
-    const resp=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:MODEL,max_tokens:300,
-        messages:[{role:"user",content:`"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action - from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it or whether the attribution is correct. Do NOT use markdown, bold, or any formatting - just plain text. Just analyze the quote itself.`}]
-      })
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({
+        model: MODEL, max_tokens: 300,
+        messages: [{ role: "user", content: `"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action - from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it. Plain text only.` }],
+      }),
     });
-    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e?.error?.message||"API error "+resp.status);}
-    const data=await resp.json();
-    const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    quoteAnalysisEl.textContent=text;
+    if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e?.error?.message || "API error"); }
+    const data = await resp.json();
+    quoteAnalysisEl.textContent = data.content.filter(b => b.type === "text").map(b => b.text).join("").trim();
     quoteAnalysisEl.classList.remove("loading");
-  }catch(err){
-    quoteAnalysisEl.textContent="Could not load analysis: "+err.message;
+  } catch (err) {
+    quoteAnalysisEl.textContent = "Could not load analysis: " + err.message;
     quoteAnalysisEl.classList.remove("loading");
   }
 }
 
-function displayNewQuote(){
-  const q=QUOTES[Math.floor(Math.random()*QUOTES.length)];
-  const bio=`https://en.wikipedia.org/wiki/${q.author.split(" ").join("_")}`;
-  quoteTextEl.textContent=`"${q.quote}"`;
-  if(q.author==="Unknown"){quoteAuthorEl.textContent=`- ${q.author}`;}
-  else{quoteAuthorEl.innerHTML=`<a href="${bio}" target="_blank">- ${q.author}</a>`;}
-  analyzeQuote(q.quote, q.author);
+function displayNewQuote() {
+  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  quoteTextEl.textContent = `"${q.quote}"`;
+  if (q.author === "Unknown") quoteAuthorEl.textContent = `- ${q.author}`;
+  else {
+    const bio = `https://en.wikipedia.org/wiki/${q.author.split(" ").join("_")}`;
+    quoteAuthorEl.innerHTML = `<a href="${bio}" target="_blank">- ${q.author}</a>`;
+  }
+  analyzeQuote(q.quote);
 }
-
 displayNewQuote();
 quoteRefreshBtn.addEventListener("click", displayNewQuote);
 </script>
