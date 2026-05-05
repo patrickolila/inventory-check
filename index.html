@@ -576,20 +576,37 @@ Respond ONLY with JSON, no prose, no markdown:
 }`;
 
 // PASS A: Transcribe expected PDF -> list of {name, category, expected}
-const PASS_A_PROMPT=`Transcribe the EXPECTED inventory PDF into a flat JSON list of items WITH STOCK ON HAND for the day.
+// Takes the target date from Pass 1 so we can anchor the prompt to ONE specific date.
+function passAPrompt(targetDate){return`Transcribe the EXPECTED inventory PDF into a flat JSON list of items WITH STOCK ON HAND for ONE specific date: ${targetDate}.
+
+═══ CRITICAL: ONE DATE ONLY ═══
+The expected PDF is a snapshot for the SINGLE DATE ${targetDate}. It is NOT a multi-day report. Every quantity you transcribe must be the on-hand count for ${targetDate} specifically.
+
+If the PDF appears to show multiple dates or columns:
+- Find the column, section, or block that corresponds to ${targetDate}
+- Read quantities from THAT date only
+- Ignore quantities from any other date
+
+If the PDF is a single-date snapshot (one quantity per item with no date columns), every quantity belongs to ${targetDate} - just read each item's quantity directly.
+
+You should produce ONE entry per unique item. Never produce one entry per (item × date) cell. Never list the same item twice.
 
 ═══ WHAT TO INCLUDE ═══
-ONLY include a row if it has a real positive integer quantity (1 or higher) in the quantity column.
+ONLY include a row if it has a real positive integer quantity (1 or higher) for ${targetDate}.
 
 ═══ WHAT TO SKIP (do NOT output an entry) ═══
-- Rows where the quantity column is blank, empty, or contains a dash/hyphen/dot
-- Rows where the quantity is 0, "0", "-", or any zero-equivalent
-- Section/category headers like "INDICA", "SATIVA", "HASH", "THE 100", "EDIBLES" — these label the items below them; never output them as items
-- Page headers, page numbers, dates, the title of the sheet, footer text, totals, subtotals
+- Rows where the quantity for ${targetDate} is blank, empty, dash, hyphen, dot, or zero
+- Section/category headers like "INDICA", "SATIVA", "HASH", "THE 100", "EDIBLES" - these label the items below them; never output them as items
+- Page headers, page numbers, dates as item names, the title of the sheet, footer text, totals, subtotals
 - Sub-labels or notes that describe a category but have no individual quantity
-- Duplicate rows: if the same item name appears more than once, output it only ONCE with the most reliable quantity you can read
+- Duplicate rows: if the same item name appears more than once, output it only ONCE
+- Quantities for any date OTHER than ${targetDate}
 
-A typical daily inventory expected sheet has roughly 20 to 50 real items. If you find yourself listing more than 60 items, you are almost certainly including section headers, blanks, or zeros — stop and review.
+═══ SANITY CHECK ═══
+A typical daily inventory expected sheet has 20-50 real items with positive quantities for a single date. If you find yourself listing more than 60 items, you are either:
+(a) including section headers, blanks, or zeros - go back and remove them
+(b) listing the same item once per date instead of once total - go back and consolidate to one entry per item with only the ${targetDate} quantity
+Either way, stop and review before finalizing your output.
 
 ═══ OUTPUT FORMAT ═══
 Flat array, no wrapping object:
@@ -598,18 +615,18 @@ Flat array, no wrapping object:
 Field rules:
 - "n" = item name. STRIP all of these characters before writing it: double quotes ("), single quotes ('), backslashes (\\), curly braces, square brackets, line breaks, tabs, em-dashes, smart quotes. Replace each with a single space. Then collapse runs of spaces to one space and trim. ASCII letters, digits, spaces, hyphens, periods, slashes are fine. Keep the name short.
 - "c" = the most recent section/category header above this item, in UPPERCASE ASCII only (e.g. "INDICA", "SATIVA", "HASH"). If no section header exists yet, use "OTHER".
-- "q" = positive integer (1+). NEVER 0. NEVER null. NEVER a string. If you cannot read a clear positive integer, skip the row entirely.
+- "q" = positive integer (1+) representing ${targetDate}'s on-hand count. NEVER 0. NEVER null. NEVER a string. If you cannot read a clear positive integer for ${targetDate}, skip the row entirely.
 
 CRITICAL JSON rules:
 - Output ONLY the JSON array. No prose, no markdown, no code fences, no leading/trailing text.
 - All strings double-quoted. No trailing commas.
 - Each entry syntactically complete. If unsure about a row, skip it entirely.
 
-Example output:
+Example output (for date 2026-05-04):
 [
 {"n":"Cherry Cheesecake","c":"INDICA","q":1},
 {"n":"Death Rockstar","c":"INDICA","q":3}
-]`;
+]`;}
 
 // PASS B: For a given list of expected item names, look each one up on the actual sheet
 // and return its value in column N. Bounded output = no truncation, no overshoot.
@@ -726,7 +743,7 @@ runBtn.addEventListener("click",async()=>{
 
     // Pass A: transcribe expected PDF -> [{n, c, q}]
     const sA=addStatus("Pass A: transcribing expected sheet");showLoading("Reading expected items");
-    const passAContent=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:PASS_A_PROMPT}];
+    const passAContent=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:passAPrompt(pass1Result.target_date)}];
     let expectedList=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
