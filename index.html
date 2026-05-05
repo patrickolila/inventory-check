@@ -453,9 +453,9 @@ function formatWhatsApp(report) {
   } catch {}
   const total = s.total_items || 0;
   const disc = s.discrepancies || 0;
-  if (disc === 0) return `Inventory Check — ${datePretty}\nAll ${total} items match.`;
+  if (disc === 0) return `Inventory Check — ${datePretty}\nAll items match.`;
 
-  const lines = [`Inventory Check — ${datePretty}`, `${disc} discrepancies out of ${total} items`, ""];
+  const lines = [`Inventory Check — ${datePretty}`, `${disc} discrepancies`, ""];
   const byCategory = {}, categoryOrder = [];
   for (const item of (report.items || [])) {
     if (item.status === "match") continue;
