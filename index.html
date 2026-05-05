@@ -404,11 +404,14 @@ IMPORTANT RULES for reading the actual sheet:
 - Handwriting may be ambiguous (e.g. "0" vs "O", "2" vs "Z", "1" vs "/"). If you're unsure, record your best guess and add a note.
 
 Your job:
-- Extract every item listed in the EXPECTED PDF with its expected quantity.
-- For each, find the matching row on the ACTUAL sheet (across all pages) and read the value in column #${colIndex} only.
+- Extract items listed in the EXPECTED PDF — but ONLY items where the expected quantity is a positive integer (1 or higher).
+- For items on the EXPECTED PDF where the expected quantity is 0, blank, empty, or a dash: check the actual sheet first. If the actual cell in column #${colIndex} is ALSO 0, blank, or missing, skip the item entirely (do not include it in the output). But if the actual cell has a positive value (e.g. expected is blank but actual reads "1"), INCLUDE it with status="over" — this is a real discrepancy: inventory appeared that wasn't on the expected list.
+- For each remaining item, find the matching row on the ACTUAL sheet (across all pages) and read the value in column #${colIndex} only.
 - Match items tolerantly — same item may have minor naming differences.
 - Use category context to disambiguate items that appear in multiple sections (e.g. "Pineapple Express" can appear under both SATIVA and another category).
 - Also list any items present on the actual sheet (in column #${colIndex}) that are NOT on the expected PDF, as status="unexpected".
+
+The summary.total_items count should reflect ONLY the items you actually output (i.e. items with a positive expected quantity, plus any unexpected items). Do not count items you skipped.
 
 Status flags:
   "match"       -> quantities equal
@@ -462,7 +465,7 @@ function formatWhatsApp(report) {
   } catch {}
   const total = s.total_items || 0;
   const disc = s.discrepancies || 0;
-  if (disc === 0) return `Inventory Check — ${datePretty}\nAll items match.`;
+  if (disc === 0) return `Inventory Check — ${datePretty}\nAll ${total} items match.`;
 
   const lines = [`Inventory Check — ${datePretty}`, `${disc} discrepancies out of ${total} items`, ""];
   const byCategory = {}, categoryOrder = [];
@@ -490,13 +493,28 @@ function formatWhatsApp(report) {
 }
 
 function renderResults(report) {
-  const s = report.summary || {};
-  const total = s.total_items || 0, disc = s.discrepancies || 0, match = total - disc;
+  // Filter logic:
+  //   DROP: expected is 0/null AND actual is 0/null (noise rows — nothing on hand)
+  //   KEEP: anything else — including "expected 0, actual 1" (unexpected appearance)
+  //         and "expected 1, actual 0" (missing inventory)
+  const filteredItems = (report.items || []).filter(i => {
+    if (i.status === "unexpected") return true; // always keep — actual has a value
+    const expHasValue = i.expected != null && i.expected !== 0 && i.expected !== "0";
+    const actHasValue = i.actual != null && i.actual !== 0 && i.actual !== "0";
+    // Keep if either side has a real value
+    return expHasValue || actHasValue;
+  });
+
+  // Recompute summary from the filtered list
+  const total = filteredItems.length;
+  const disc = filteredItems.filter(i => i.status !== "match").length;
+  const match = total - disc;
+
   resultsSummary.innerHTML = `
     <div class="stat-card green"><div class="stat-value">${match}</div><div class="stat-label">Match</div></div>
     <div class="stat-card ${disc > 0 ? "red" : "green"}"><div class="stat-value">${disc}</div><div class="stat-label">Discrepancies</div></div>
     <div class="stat-card"><div class="stat-value">${total}</div><div class="stat-label">Total</div></div>`;
-  const flagged = (report.items || []).filter(i => i.status !== "match");
+  const flagged = filteredItems.filter(i => i.status !== "match");
   if (!flagged.length) {
     resultsBody.innerHTML = '<div class="all-match-banner">All items match</div>';
   } else {
@@ -524,7 +542,13 @@ function renderResults(report) {
     }
     resultsBody.innerHTML = html;
   }
-  const wa = formatWhatsApp(report);
+  // Build a cleaned report for WhatsApp using the same filtered list and recomputed counts
+  const cleanedReport = {
+    ...report,
+    items: filteredItems,
+    summary: { total_items: total, discrepancies: disc, ambiguous: (report.summary || {}).ambiguous || 0 },
+  };
+  const wa = formatWhatsApp(cleanedReport);
   whatsappPreview.textContent = wa;
   copyBtn.onclick = async () => {
     await navigator.clipboard.writeText(wa);
