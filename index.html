@@ -576,25 +576,36 @@ Respond ONLY with JSON, no prose, no markdown:
 }`;
 
 // PASS A: Transcribe expected PDF -> list of {name, category, expected}
-const PASS_A_PROMPT=`Transcribe the EXPECTED inventory PDF into a flat JSON list.
+const PASS_A_PROMPT=`Transcribe the EXPECTED inventory PDF into a flat JSON list of items WITH STOCK ON HAND for the day.
 
-Read every line item on the sheet. For each item that has a quantity (a number), output one entry. Skip items with no quantity. Section/category headers (like "INDICA", "SATIVA", "HASH") are NOT items — they label the items below them until the next section header.
+═══ WHAT TO INCLUDE ═══
+ONLY include a row if it has a real positive integer quantity (1 or higher) in the quantity column.
 
-OUTPUT FORMAT - flat array, no wrapping object:
-[{"n":"item name","c":"category","q":number}]
+═══ WHAT TO SKIP (do NOT output an entry) ═══
+- Rows where the quantity column is blank, empty, or contains a dash/hyphen/dot
+- Rows where the quantity is 0, "0", "-", or any zero-equivalent
+- Section/category headers like "INDICA", "SATIVA", "HASH", "THE 100", "EDIBLES" — these label the items below them; never output them as items
+- Page headers, page numbers, dates, the title of the sheet, footer text, totals, subtotals
+- Sub-labels or notes that describe a category but have no individual quantity
+- Duplicate rows: if the same item name appears more than once, output it only ONCE with the most reliable quantity you can read
+
+A typical daily inventory expected sheet has roughly 20 to 50 real items. If you find yourself listing more than 60 items, you are almost certainly including section headers, blanks, or zeros — stop and review.
+
+═══ OUTPUT FORMAT ═══
+Flat array, no wrapping object:
+[{"n":"item name","c":"category","q":positive_integer}]
 
 Field rules:
 - "n" = item name. STRIP all of these characters before writing it: double quotes ("), single quotes ('), backslashes (\\), curly braces, square brackets, line breaks, tabs, em-dashes, smart quotes. Replace each with a single space. Then collapse runs of spaces to one space and trim. ASCII letters, digits, spaces, hyphens, periods, slashes are fine. Keep the name short.
-- "c" = the most recent section/category header above this item, in UPPERCASE, ASCII letters only. If no section header exists yet, use "OTHER".
-- "q" = the quantity as a plain integer. No units, no fractions, no quotes around the number.
+- "c" = the most recent section/category header above this item, in UPPERCASE ASCII only (e.g. "INDICA", "SATIVA", "HASH"). If no section header exists yet, use "OTHER".
+- "q" = positive integer (1+). NEVER 0. NEVER null. NEVER a string. If you cannot read a clear positive integer, skip the row entirely.
 
 CRITICAL JSON rules:
 - Output ONLY the JSON array. No prose, no markdown, no code fences, no leading/trailing text.
 - All strings double-quoted. No trailing commas.
-- Each entry must be syntactically complete before you start the next one. Verify by mentally checking the closing brace and comma before moving on.
-- If you are uncertain about an item name, omit that entry entirely rather than emit a malformed one.
+- Each entry syntactically complete. If unsure about a row, skip it entirely.
 
-Example output (note the clean ASCII names):
+Example output:
 [
 {"n":"Cherry Cheesecake","c":"INDICA","q":1},
 {"n":"Death Rockstar","c":"INDICA","q":3}
@@ -731,10 +742,27 @@ runBtn.addEventListener("click",async()=>{
     updateStatus(sA,"done");
 
     // Pass B: look up the specific expected items in column N of actual sheet
-    // Build the names list from Pass A's output - only items with a quantity
-    const lookupNames = expectedList.filter(e => e.q != null).map(e => e.n);
+    // Defensive cleanup of Pass A output — drop blanks, zeros, non-integers, and duplicates.
+    // This protects Pass B from being asked to look up 100+ items when the real count is ~30.
+    const seen = new Set();
+    const cleaned = [];
+    for(const e of expectedList){
+      const name = (e.n||"").trim();
+      const qty = parseInt(e.q, 10);
+      if(!name) continue;
+      if(!Number.isFinite(qty) || qty <= 0) continue; // skip blanks, zeros, negatives, NaN
+      const key = normName(name);
+      if(seen.has(key)) continue; // dedupe
+      seen.add(key);
+      cleaned.push({n: name, c: e.c || "OTHER", q: qty});
+    }
+    expectedList = cleaned;
+    const lookupNames = expectedList.map(e => e.n);
     if(lookupNames.length === 0){
-      throw new Error("No items with quantities found in expected sheet");
+      throw new Error("No items with positive quantities found in expected sheet after cleanup");
+    }
+    if(lookupNames.length > 80){
+      console.warn(`Pass A returned ${lookupNames.length} items - more than expected. Proceeding anyway.`);
     }
     const sB=addStatus(`Pass B: looking up ${lookupNames.length} items in column #${pass1Result.column_index}`);showLoading("Looking up items");
     const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date,lookupNames)}];
