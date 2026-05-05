@@ -535,34 +535,104 @@ Respond ONLY with JSON, no prose, no markdown:
   "note": "string"
 }`;
 
-function pass2Prompt(ci,ch,td){return`Inventory auditor. Two inputs: EXPECTED PDF (items+quantities for one date) and ACTUAL sheet (multi-page, ~14 day-columns).
+// PASS A: Transcribe expected PDF -> list of {name, category, expected}
+const PASS_A_PROMPT=`Transcribe the EXPECTED inventory PDF into a flat JSON list.
 
-TARGET COLUMN: data-column #${ci} (1-based, skip item-name column). Its header on page 1 reads exactly "${ch}". Date:${td}.
+Read every line item on the sheet. For each item that has a quantity (a number), output one entry. Skip items with no quantity. Section/category headers (like "INDICA", "SATIVA", "HASH") are NOT items — they label the items below them until the next section header.
 
-═══ COLUMN DRIFT PREVENTION — READ TWICE ═══
-The single most common error on this task is reading the WRONG column (off by one to the right or left). This produces a result where almost every item is over by +1 with no negatives, which is mathematically impossible from real counting and means you drifted columns. To prevent this:
+OUTPUT FORMAT - flat array, no wrapping object:
+[{"n":"item name","c":"category","q":number}]
 
-1. Before reading ANY value, mentally trace a vertical line straight up from the cell to the top header row of that page. Confirm the header above your cell reads "${ch}". If it reads anything else, you are in the wrong column — recount data columns from the leftmost data column (column #1) and adjust.
+Field rules:
+- "n" = item name exactly as written, trimmed. If the name contains a double quote, replace it with a single quote.
+- "c" = the most recent section/category header above this item, in UPPERCASE. If no section header exists yet, use "OTHER".
+- "q" = the quantity as a plain integer. No units, no fractions.
 
-2. Each new page of the actual sheet repeats the same date-header row at the top. The target column is ALWAYS the column whose header reads "${ch}" — verify this header on EVERY page before reading any cells from that page.
+CRITICAL JSON rules:
+- Output ONLY the JSON array. No prose, no markdown, no code fences.
+- All strings double-quoted. No trailing commas. No unescaped quotes inside strings.
+- Each entry on its own line for readability is fine.
 
-3. If you cannot clearly see the header alignment for a row (e.g. row is far from top of page, or columns are skewed), set actual=null and note="column alignment unclear" rather than guessing. A null is better than a wrong number.
+Example output:
+[
+{"n":"Cherry Cheesecake","c":"INDICA","q":1},
+{"n":"Death Rockstar","c":"INDICA","q":3}
+]`;
 
-4. Do NOT assume the column position is the same pixel-x on every page. Sheets get scanned at slightly different angles. Use the header text "${ch}" as your anchor, not horizontal position.
+// PASS B: Transcribe column N of actual sheet -> list of {name, actual}
+function passBPrompt(ci,ch,td){return`Transcribe one column of the ACTUAL inventory pack sheet into a flat JSON list.
 
-═══ TASK ═══
-Check every item on EXPECTED PDF with a quantity. For each: find the row on actual sheet, read the cell under header "${ch}" (which is data-column #${ci}), compare. Rules: leftmost col is names not data. Section headers=categories. Blank=null. Match names tolerantly.
+TARGET: data-column #${ci} (1-based, skipping the leftmost item-name column). Its header on page 1 reads exactly "${ch}". This column corresponds to date ${td}.
 
-Status: "short"|"over"|"missing" (do NOT include matches)
+═══ HOW TO READ THE TARGET COLUMN ═══
+1. On page 1, find the header row at the top. Locate the column whose header reads exactly "${ch}".
+2. Walk straight down that column, row by row, to the bottom of the page.
+3. For each row, read TWO things: (a) the item name in the leftmost column, (b) the value in the target column.
+4. On every subsequent page, the same date-header row repeats at the top. Re-locate the column whose header reads "${ch}" on each page before reading values from that page. Do NOT assume the same horizontal position.
+5. Section/category headers (rows like "INDICA" with no value) are NOT items — skip them.
+6. If a cell is blank, set "v" to null. If a cell is unreadable or the column alignment is unclear for that row, also use null. A null is better than a guess.
 
-CRITICAL: items[] must contain ONLY discrepancies (status != match). Items where expected==actual are EXCLUDED from items[] but still counted in summary.total_items.
+OUTPUT FORMAT - flat array, no wrapping object:
+[{"n":"item name","v":number_or_null}]
 
-summary.total_items = total items checked from expected PDF (matches + discrepancies)
-summary.discrepancies = count of items in items[] array (must equal items.length)
+Field rules:
+- "n" = item name exactly as written in the leftmost column, trimmed. If the name contains a double quote, replace it with a single quote.
+- "v" = the value in the target column as a plain integer, or null. No units.
 
-COMPACT JSON output. note="" unless ambiguous or column alignment unclear. No markdown. No text outside JSON. No trailing commas. All strings double-quoted.
+CRITICAL JSON rules:
+- Output ONLY the JSON array. No prose, no markdown, no code fences.
+- All strings double-quoted. No trailing commas. No unescaped quotes inside strings.
 
-{"report_date":"${td}","column_used":{"index":${ci},"header_raw":"${ch}"},"items":[{"item":"x","category":"x","expected":0,"actual":0,"difference":0,"status":"short","note":""}],"summary":{"total_items":0,"discrepancies":0,"ambiguous":0}}`;}
+Example output:
+[
+{"n":"Cherry Cheesecake","v":4},
+{"n":"Death Rockstar","v":4},
+{"n":"Pink Venom","v":null}
+]`;}
+
+// Normalize an item name for matching: lowercase, collapse whitespace, strip punctuation except digits and letters
+function normName(s){return (s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");}
+
+// Compare expected list and actual list, build report
+function buildReport(expectedList, actualList, targetDate, columnIndex, columnHeader){
+  // Build actual map: normalized name -> value
+  const actualMap = new Map();
+  for(const e of actualList){ actualMap.set(normName(e.n), e.v); }
+  // Walk expected list, classify each item
+  const items = [];
+  let totalChecked = 0;
+  for(const e of expectedList){
+    const exp = e.q;
+    if(exp == null) continue; // skip items without quantity
+    totalChecked++;
+    const key = normName(e.n);
+    let act = actualMap.get(key);
+    let note = "";
+    // If exact normalized match failed, try fuzzy (substring both ways)
+    if(act === undefined){
+      for(const [ak, av] of actualMap){
+        if(ak.includes(key) || key.includes(ak)){ act = av; note = `fuzzy match: "${ak}"`; break; }
+      }
+    }
+    if(act === undefined){
+      items.push({item:e.n, category:e.c||"OTHER", expected:exp, actual:null, difference:null, status:"missing", note:"not found on actual sheet"});
+      continue;
+    }
+    if(act === null){
+      items.push({item:e.n, category:e.c||"OTHER", expected:exp, actual:null, difference:null, status:"missing", note:note||"cell blank or unreadable"});
+      continue;
+    }
+    if(act === exp) continue; // match - skip
+    const diff = act - exp;
+    items.push({item:e.n, category:e.c||"OTHER", expected:exp, actual:act, difference:diff, status: diff>0?"over":"short", note});
+  }
+  return {
+    report_date: targetDate,
+    column_used: {index: columnIndex, header_raw: columnHeader},
+    items,
+    summary: {total_items: totalChecked, discrepancies: items.length, ambiguous: items.filter(i=>i.note).length}
+  };
+}
 
 function formatWhatsApp(report){const s=report.summary||{};let dp=report.report_date||"";try{const d=new Date(dp+"T00:00:00");dp=d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{}const t=s.total_items||0,disc=s.discrepancies||0;if(disc===0)return`Inventory Check — ${dp}\nAll ${t} items match.`;const lines=[`Inventory Check — ${dp}`,`${disc} discrepancies out of ${t} items`,""];const bc={},co=[];for(const i of(report.items||[])){if(i.status==="match")continue;const c=i.category||"Other";if(!bc[c]){bc[c]=[];co.push(c);}bc[c].push(i);}for(const c of co){lines.push(c);for(const i of bc[c]){const e=i.expected!=null?i.expected:"-",a=i.actual!=null?i.actual:"-";let v="-";if(i.expected!=null&&i.actual!=null){const d=i.actual-i.expected;v=(d>0?"+":"")+d;}lines.push(`- ${i.item}: actual ${a}, expected ${e}, variance ${v}`);}lines.push("");}return lines.join("\n").trimEnd();}
 
@@ -590,25 +660,46 @@ runBtn.addEventListener("click",async()=>{
     const confirmed=await new Promise(r=>{btnYes.onclick=()=>r(true);btnNo.onclick=()=>r(false);});
     confirmBox.classList.remove("visible");
     if(!confirmed){addStatus("Aborted","done");runBtn.disabled=false;return;}
-    const s2=addStatus("Pass 2: checking expected items");showLoading("Matching items");
-    const pass2Content=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:pass2Prompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}];
-    let report=null;
+
+    // Pass A: transcribe expected PDF -> [{n, c, q}]
+    const sA=addStatus("Pass A: transcribing expected sheet");showLoading("Reading expected items");
+    const passAContent=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:PASS_A_PROMPT}];
+    let expectedList=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
-        const p2=await callClaude(apiKey,[{role:"user",content:pass2Content}],6000,onRateWait);
-        report=parseJSON(extractText(p2));
+        const pA=await callClaude(apiKey,[{role:"user",content:passAContent}],4000,onRateWait);
+        expectedList=parseJSON(extractText(pA));
+        if(!Array.isArray(expectedList)) throw new Error("Pass A did not return an array");
         break;
       }catch(parseErr){
-        if(attempt===1){
-          updateStatus(s2,"running");addStatus("Retrying Pass 2 (JSON issue) - waiting 65s for rate limit window");showLoading("Waiting before retry");
-          // Wait past the 1-minute TPM window so the retry doesn't compound the rate-limit hit
-          await sleep(65000);
-          showLoading("Retrying");
-        }
-        else{throw parseErr;}
+        if(attempt===1){updateStatus(sA,"running");addStatus("Retrying Pass A - brief pause");showLoading("Waiting before retry");await sleep(15000);showLoading("Retrying");}
+        else{throw new Error("Pass A failed: "+parseErr.message);}
       }
     }
-    updateStatus(s2,"done");hideLoading();renderResults(report);
+    updateStatus(sA,"done");
+
+    // Pass B: transcribe column N of actual sheet -> [{n, v}]
+    const sB=addStatus(`Pass B: transcribing column #${pass1Result.column_index} of actual sheet`);showLoading("Reading actual sheet column");
+    const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}];
+    let actualList=null;
+    for(let attempt=1;attempt<=2;attempt++){
+      try{
+        const pB=await callClaude(apiKey,[{role:"user",content:passBContent}],4000,onRateWait);
+        actualList=parseJSON(extractText(pB));
+        if(!Array.isArray(actualList)) throw new Error("Pass B did not return an array");
+        break;
+      }catch(parseErr){
+        if(attempt===1){updateStatus(sB,"running");addStatus("Retrying Pass B - brief pause");showLoading("Waiting before retry");await sleep(15000);showLoading("Retrying");}
+        else{throw new Error("Pass B failed: "+parseErr.message);}
+      }
+    }
+    updateStatus(sB,"done");
+
+    // Compare in JS
+    const sC=addStatus("Comparing");
+    const report=buildReport(expectedList, actualList, pass1Result.target_date, pass1Result.column_index, pass1Result.column_header_raw);
+    updateStatus(sC,"done");
+    hideLoading();renderResults(report);
   }catch(err){hideLoading();showError(err.message);if(statusSteps.length>0)updateStatus(statusSteps.length-1,"error");}
   runBtn.disabled=false;
 });
