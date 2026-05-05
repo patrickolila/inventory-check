@@ -600,33 +600,42 @@ Example output (note the clean ASCII names):
 {"n":"Death Rockstar","c":"INDICA","q":3}
 ]`;
 
-// PASS B: Transcribe column N of actual sheet -> list of {name, actual}
-function passBPrompt(ci,ch,td){return`Transcribe one column of the ACTUAL inventory pack sheet into a flat JSON list.
+// PASS B: For a given list of expected item names, look each one up on the actual sheet
+// and return its value in column N. Bounded output = no truncation, no overshoot.
+function passBPrompt(ci,ch,td,namesList){
+  const namesJson = JSON.stringify(namesList);
+  return `Look up specific items on the ACTUAL inventory pack sheet and report the value in one column.
 
-TARGET: data-column #${ci} (1-based, skipping the leftmost item-name column). Its header on page 1 reads exactly "${ch}". This column corresponds to date ${td}.
+TARGET COLUMN: data-column #${ci} (1-based, skipping the leftmost item-name column). Its header on page 1 reads exactly "${ch}". Date: ${td}.
 
-═══ HOW TO READ THE TARGET COLUMN ═══
-1. On page 1, find the header row at the top. Locate the column whose header reads exactly "${ch}".
-2. Walk straight down that column, row by row, to the bottom of the page.
-3. For each row, read TWO things: (a) the item name in the leftmost column, (b) the value in the target column.
-4. On every subsequent page, the same date-header row repeats at the top. Re-locate the column whose header reads "${ch}" on each page before reading values from that page. Do NOT assume the same horizontal position.
-5. Section/category headers (rows like "INDICA" with no value) are NOT items — skip them.
-6. If a cell is blank, set "v" to null. If a cell is unreadable or the column alignment is unclear for that row, also use null. A null is better than a guess.
+ITEMS TO LOOK UP (exact list, in order):
+${namesJson}
 
-OUTPUT FORMAT - flat array, no wrapping object:
-[{"n":"item name","v":number_or_null}]
+═══ TASK ═══
+For EACH name in the list above (in order), do the following:
+1. Find the row on the actual sheet whose item name in the leftmost column matches that name. Match tolerantly: ignore case, whitespace, and punctuation differences. The handwritten name may be slightly different from the typed name.
+2. On the row you found, read the cell in the target column. The target column is the one whose header reads "${ch}" on the page where that row appears.
+3. Output one entry: {"n":"<name from input list verbatim>","v":<integer_or_null>}.
 
-Field rules:
-- "n" = item name from the leftmost column. STRIP all of these characters before writing it: double quotes ("), single quotes ('), backslashes (\\), curly braces, square brackets, line breaks, tabs, em-dashes, smart quotes. Replace each with a single space. Then collapse runs of spaces to one space and trim. ASCII letters, digits, spaces, hyphens, periods, slashes are fine. Keep the name short.
-- "v" = the value in the target column as a plain integer, or null. No units, no quotes around numbers.
+═══ COLUMN RULES ═══
+- The target column header reads "${ch}" on EVERY page. Re-locate it on each page before reading. Do not rely on horizontal pixel position - scans skew between pages.
+- If a cell is blank, "v" is null.
+- If a cell is unreadable or column alignment is unclear, "v" is null.
+- If you cannot find the named row at all on the actual sheet, "v" is null.
+- Null is always better than a guess.
+
+═══ OUTPUT ═══
+Return EXACTLY ${namesList.length} entries, in the same order as the input list. The "n" field of each entry must be copied verbatim from the input list (do not modify it). Only the "v" field varies.
+
+OUTPUT FORMAT - flat array only:
+[{"n":"<input name>","v":<integer_or_null>}]
 
 CRITICAL JSON rules:
 - Output ONLY the JSON array. No prose, no markdown, no code fences, no leading/trailing text.
-- All strings double-quoted. No trailing commas.
-- Each entry must be syntactically complete before you start the next one.
-- If you are uncertain about a row, omit it entirely rather than emit a malformed entry.
+- All strings double-quoted. No trailing commas. No unescaped quotes.
+- Numbers are bare integers, not strings. Null is the bare token null.
 
-Example output:
+Example (with a 3-item input list):
 [
 {"n":"Cherry Cheesecake","v":4},
 {"n":"Death Rockstar","v":4},
@@ -721,13 +730,18 @@ runBtn.addEventListener("click",async()=>{
     }
     updateStatus(sA,"done");
 
-    // Pass B: transcribe column N of actual sheet -> [{n, v}]
-    const sB=addStatus(`Pass B: transcribing column #${pass1Result.column_index} of actual sheet`);showLoading("Reading actual sheet column");
-    const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date)}];
+    // Pass B: look up the specific expected items in column N of actual sheet
+    // Build the names list from Pass A's output - only items with a quantity
+    const lookupNames = expectedList.filter(e => e.q != null).map(e => e.n);
+    if(lookupNames.length === 0){
+      throw new Error("No items with quantities found in expected sheet");
+    }
+    const sB=addStatus(`Pass B: looking up ${lookupNames.length} items in column #${pass1Result.column_index}`);showLoading("Looking up items");
+    const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date,lookupNames)}];
     let actualList=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
-        const pB=await callClaude(apiKey,[{role:"user",content:passBContent}],4000,onRateWait);
+        const pB=await callClaude(apiKey,[{role:"user",content:passBContent}],2000,onRateWait);
         actualList=parseJSON(extractText(pB));
         if(!Array.isArray(actualList)) throw new Error("Pass B did not return an array");
         break;
