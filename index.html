@@ -13,17 +13,27 @@
 </script>
 <style>
   :root {
-    --bg: #f5f1e8;
-    --surface: #ffffff;
-    --surface-2: #faf6ec;
-    --border: #d9cfb8;
-    --border-strong: #b8a888;
-    --text: #2a1f10;
-    --text-muted: #7a6a52;
-    --rasta-red: #c92a2a;
-    --rasta-gold: #d49a00;
-    --rasta-green: #2d7a3e;
-    --shadow: 0 1px 3px rgba(60, 40, 10, 0.08);
+    /* Dark theme — warm-neutral, single accent */
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --surface-2: #2c2c2c;
+    --border: #3a3a3a;
+    --border-strong: #4a4a4a;
+    --text: #e8e6e1;
+    --text-muted: #8a8580;
+    /* Single accent color (warm amber) — used for headings, links, highlights */
+    --accent: #d4a574;
+    --accent-dim: #9a7a55;
+    /* Functional colors — kept muted to not strain eyes */
+    --success: #6b9b6e;
+    --success-bg: #1f2a20;
+    --danger: #c97070;
+    --danger-bg: #2a1f1f;
+    /* Legacy aliases so existing class names still work */
+    --rasta-red: var(--danger);
+    --rasta-gold: var(--accent);
+    --rasta-green: var(--success);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -32,14 +42,11 @@
     color: var(--text);
     line-height: 1.5;
     font-size: 15px;
+    color-scheme: dark;
   }
 
   /* Top + bottom rasta bands as flat solid stripes (no gradients) */
-  .stripe-top, .stripe-bot { display: flex; height: 4px; }
-  .stripe-top > div, .stripe-bot > div { flex: 1; }
-  .s-red { background: var(--rasta-red); }
-  .s-gold { background: var(--rasta-gold); }
-  .s-green { background: var(--rasta-green); }
+  .stripe-top, .stripe-bot { height: 2px; background: var(--accent); opacity: 0.5; }
 
   .container { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; }
 
@@ -47,11 +54,12 @@
   .header h1 {
     font-size: 28px;
     font-weight: 700;
-    color: var(--rasta-green);
+    color: var(--text);
     margin-bottom: 4px;
+    letter-spacing: -0.3px;
   }
-  .header h1 .accent-r { color: var(--rasta-red); }
-  .header h1 .accent-g { color: var(--rasta-gold); }
+  .header h1 .accent-r,
+  .header h1 .accent-g { color: var(--accent); }
   .header p { color: var(--text-muted); font-size: 14px; }
 
   .card {
@@ -127,11 +135,11 @@
     background: var(--surface-2);
     display: block;
   }
-  .upload-zone:hover { border-color: var(--rasta-gold); background: #fdf6e3; }
+  .upload-zone:hover { border-color: var(--accent); background: var(--surface); }
   .upload-zone.has-file {
-    border-color: var(--rasta-green);
+    border-color: var(--success);
     border-style: solid;
-    background: #e8f3eb;
+    background: var(--success-bg);
   }
   .upload-zone input { display: none; }
   .upload-label { font-size: 14px; font-weight: 700; display: block; margin-bottom: 2px; }
@@ -158,8 +166,8 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
-  .run-btn:hover { background: #246332; }
-  .run-btn:disabled { background: #b5b0a3; color: #fff; cursor: not-allowed; }
+  .run-btn:hover { background: #5a8a5d; }
+  .run-btn:disabled { background: var(--surface-2); color: var(--text-muted); cursor: not-allowed; border: 1px solid var(--border); }
 
   /* Status */
   .status-bar { display: none; margin-bottom: 14px; padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; }
@@ -201,7 +209,7 @@
     cursor: pointer;
   }
   .btn-yes { background: var(--rasta-green); color: #fff; border-color: var(--rasta-green); }
-  .btn-yes:hover { background: #246332; }
+  .btn-yes:hover { background: #5a8a5d; }
   .btn-no { background: var(--surface); color: var(--text); }
   .btn-no:hover { background: var(--surface-2); }
 
@@ -308,13 +316,13 @@
 
   .error-box {
     display: none;
-    background: #fbecec;
-    border: 1px solid var(--rasta-red);
+    background: var(--danger-bg);
+    border: 1px solid var(--danger);
     border-radius: 4px;
     padding: 12px;
     margin-bottom: 14px;
     font-size: 13px;
-    color: var(--rasta-red);
+    color: var(--danger);
   }
   .error-box.visible { display: block; }
 
@@ -339,7 +347,7 @@
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: 1000;
-    background: rgba(245, 241, 232, 0.95);
+    background: rgba(26, 26, 26, 0.92);
     align-items: center;
     justify-content: center;
   }
@@ -358,9 +366,7 @@
 </head>
 <body>
 
-<div class="stripe-top">
-  <div class="s-red"></div><div class="s-gold"></div><div class="s-green"></div>
-</div>
+<div class="stripe-top"></div>
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-box">
@@ -432,9 +438,7 @@
   <button class="reset-btn" id="resetBtn">Start over</button>
 </div>
 
-<div class="stripe-bot">
-  <div class="s-green"></div><div class="s-gold"></div><div class="s-red"></div>
-</div>
+<div class="stripe-bot"></div>
 
 <script>
 let expectedB64=null,actualB64=null,expectedBytes=null,pass1Result=null;
@@ -640,16 +644,35 @@ async function extractExpectedItems(arrayBuffer){
         if(/^(total|subtotal|grand total|sum)$/i.test(name)) continue;
         items.push({n: name, c: currentCategory, q: qty});
       } else {
-        // No trailing integer → treat as a category header if it's a short, ALL-CAPS-ish word/phrase
-        // Limit to plausible category lines: short, mostly letters, no embedded digits at the end
+        // No trailing integer → treat as a category header.
+        // Strategy: clean the text, then accept it if it matches a known cannabis category
+        // (case-insensitive) OR if it's a short, mostly-letter phrase that looks like a header.
         const headerCandidate = joined.replace(/[^\w\s]+/g, " ").replace(/\s+/g, " ").trim();
-        if(headerCandidate.length > 0 && headerCandidate.length <= 30 && /^[A-Z0-9 ]+$/.test(headerCandidate)){
-          currentCategory = headerCandidate.toUpperCase();
+        if(!headerCandidate) continue;
+
+        const KNOWN_CATEGORIES = [
+          "INDICA","SATIVA","HYBRID","HYBRIDS",
+          "HASH","EDIBLES","PREROLLS","PRE ROLLS","PRE-ROLLS",
+          "CONCENTRATES","CONCENTRATE","FLOWER","FLOWERS",
+          "VAPES","CARTS","CARTRIDGES",
+          "TINCTURES","TOPICALS","ACCESSORIES",
+          "THE 100","THE100","100",
+          "OTHER","MISC"
+        ];
+        const upper = headerCandidate.toUpperCase();
+        const isKnown = KNOWN_CATEGORIES.some(c => upper === c || upper.startsWith(c + " ") || upper.endsWith(" " + c));
+        // Permissive header check: short (<=30 chars), mostly letters, no digits in the middle of words
+        const looksLikeHeader = headerCandidate.length <= 30 && /^[A-Za-z][A-Za-z0-9 ]*$/.test(headerCandidate) && headerCandidate.split(" ").length <= 4;
+
+        if(isKnown || looksLikeHeader){
+          currentCategory = upper;
         }
-        // Otherwise just skip — likely a wrapped row, comment, or noise
+        // Otherwise skip — likely a wrapped row, comment, or noise
       }
     }
   }
+
+  console.log("Pass A categories detected during walk:", Array.from(new Set(items.map(i => i.c))));
 
   // Dedupe by normalized name (last write wins on duplicates — usually the totals match anyway)
   const seen = new Map();
@@ -657,45 +680,73 @@ async function extractExpectedItems(arrayBuffer){
     const key = it.n.toLowerCase().replace(/[^a-z0-9]+/g, "");
     if(!seen.has(key)) seen.set(key, it);
   }
-  return Array.from(seen.values());
+  const result = Array.from(seen.values());
+
+  // Diagnostic: per-category counts so we can see if hybrids etc. are present
+  const byCategory = {};
+  for(const it of result){ byCategory[it.c] = (byCategory[it.c]||0) + 1; }
+  console.log("Pass A items per category:", byCategory);
+
+  return result;
 }
 
 // PASS B: For a given list of expected item names, look each one up on the actual sheet
 // and return its value in column N. Bounded output = no truncation, no overshoot.
-function passBPrompt(ci,ch,td,namesList){
+function passBPrompt(ci,ch,td,namesList,allHeaders){
   const namesJson = JSON.stringify(namesList);
-  return `Look up specific items on the ACTUAL inventory pack sheet and report the value in one column.
+  const headers = Array.isArray(allHeaders) ? allHeaders : [];
+  const idx = ci - 1; // 0-based for array indexing
+  const leftHeader = idx > 0 ? headers[idx - 1] : null;
+  const rightHeader = idx < headers.length - 1 ? headers[idx + 1] : null;
+  const headersDisplay = headers.map((h, i) => i === idx ? `[${h}]` : h).join(" ");
+  // Compute the wrong-column headers (everything that isn't ours) so we can warn against them
+  const otherHeaders = headers.filter((_, i) => i !== idx);
 
-TARGET COLUMN: data-column #${ci} (1-based, skipping the leftmost item-name column). Its header on page 1 reads exactly "${ch}". Date: ${td}.
+  return `Look up specific items on the ACTUAL inventory pack sheet and report the value in ONE specific column.
 
 ITEMS TO LOOK UP (exact list, in order):
 ${namesJson}
 
-═══ TASK ═══
-For EACH name in the list above (in order), do the following:
-1. Find the row on the actual sheet whose item name in the leftmost column matches that name. Match tolerantly: ignore case, whitespace, and punctuation differences. The handwritten name may be slightly different from the typed name.
-2. On the row you found, read the cell in the target column. The target column is the one whose header reads "${ch}" on the page where that row appears.
-3. Output one entry: {"n":"<name from input list verbatim>","v":<integer_or_null>}.
+═══ TARGET COLUMN — READ THIS CAREFULLY ═══
+The target column is data-column #${ci} (1-based, skipping the leftmost item-name column). Its header reads exactly "${ch}". Date: ${td}.
 
-═══ COLUMN RULES ═══
-- The target column header reads "${ch}" on EVERY page. Re-locate it on each page before reading. Do not rely on horizontal pixel position - scans skew between pages.
+The complete header row of the actual sheet, left to right, looks like this (target in brackets):
+${headersDisplay}
+
+NEIGHBOR ANCHORS:
+- The column IMMEDIATELY TO THE LEFT of the target has header: ${leftHeader === null ? "(none — target is the leftmost data column)" : `"${leftHeader}"`}
+- The column IMMEDIATELY TO THE RIGHT of the target has header: ${rightHeader === null ? "(none — target is the rightmost data column)" : `"${rightHeader}"`}
+
+CRITICAL DRIFT CHECK: Before reading any cell, trace a vertical line from the cell up to the header row of that page and verify the header reads "${ch}". If the header above your cell reads any of these other values, you are in the WRONG column and must shift over: ${JSON.stringify(otherHeaders)}.
+
+The most common error is reading a column 1-3 positions to the LEFT of the target (yesterday's or earlier days' counts). If your readings seem systematically lower than expected, you have probably drifted left. Recount data columns from the leftmost data column and try again.
+
+═══ TASK ═══
+For EACH name in the list above (in order):
+1. Find the row on the actual sheet whose item name in the leftmost column matches that name. Match tolerantly: ignore case, whitespace, and punctuation. Handwritten names may differ slightly from typed names.
+2. Verify you are about to read the target column by checking that the header above the cell reads "${ch}", with "${leftHeader || 'nothing'}" to its immediate left and "${rightHeader || 'nothing'}" to its immediate right.
+3. Read the value in that cell.
+4. Output one entry: {"n":"<name from input list verbatim>","v":<integer_or_null>}.
+
+═══ READING RULES ═══
+- The target column header "${ch}" appears at the top of EVERY page. Re-anchor on each page; do not rely on pixel position.
 - If a cell is blank, "v" is null.
-- If a cell is unreadable or column alignment is unclear, "v" is null.
-- If you cannot find the named row at all on the actual sheet, "v" is null.
+- If column alignment is unclear or unreadable, "v" is null.
+- If you cannot find the named row, "v" is null.
 - Null is always better than a guess.
 
 ═══ OUTPUT ═══
-Return EXACTLY ${namesList.length} entries, in the same order as the input list. The "n" field of each entry must be copied verbatim from the input list (do not modify it). Only the "v" field varies.
+Return EXACTLY ${namesList.length} entries, same order as input. Copy each "n" verbatim from the input list.
 
 OUTPUT FORMAT - flat array only:
 [{"n":"<input name>","v":<integer_or_null>}]
 
 CRITICAL JSON rules:
-- Output ONLY the JSON array. No prose, no markdown, no code fences, no leading/trailing text.
+- Output ONLY the JSON array. No prose, no markdown, no code fences.
 - All strings double-quoted. No trailing commas. No unescaped quotes.
-- Numbers are bare integers, not strings. Null is the bare token null.
+- Numbers are bare integers. Null is the bare token null.
 
-Example (with a 3-item input list):
+Example (3-item input):
 [
 {"n":"Cherry Cheesecake","v":4},
 {"n":"Death Rockstar","v":4},
@@ -812,13 +863,14 @@ runBtn.addEventListener("click",async()=>{
       console.warn(`Pass A returned ${lookupNames.length} items - more than expected. Proceeding anyway.`);
     }
     const sB=addStatus(`Pass B: looking up ${lookupNames.length} items in column #${pass1Result.column_index}`);showLoading("Looking up items");
-    const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date,lookupNames)}];
+    const passBContent=[{type:"text",text:"ACTUAL inventory PDF (all pages):"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:actualB64}},{type:"text",text:passBPrompt(pass1Result.column_index,pass1Result.column_header_raw,pass1Result.target_date,lookupNames,pass1Result.all_headers_raw)}];
     let actualList=null;
     for(let attempt=1;attempt<=2;attempt++){
       try{
         const pB=await callClaude(apiKey,[{role:"user",content:passBContent}],2000,onRateWait);
         actualList=parseJSON(extractText(pB));
         if(!Array.isArray(actualList)) throw new Error("Pass B did not return an array");
+        console.log("Pass B returned", actualList.length, "items:", actualList);
         break;
       }catch(parseErr){
         if(attempt===1){updateStatus(sB,"running");addStatus("Retrying Pass B - brief pause");showLoading("Waiting before retry");await sleep(15000);showLoading("Retrying");}
