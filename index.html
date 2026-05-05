@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventory Check</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // Set worker source for pdf.js
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+</script>
 <style>
   :root {
     --bg: #f5f1e8;
@@ -430,7 +437,7 @@
 </div>
 
 <script>
-let expectedB64=null,actualB64=null,pass1Result=null;
+let expectedB64=null,actualB64=null,expectedBytes=null,pass1Result=null;
 const MODEL="claude-opus-4-7";
 const $=id=>document.getElementById(id);
 const apiKeyInput=$("apiKey"),expectedFile=$("expectedFile"),actualFile=$("actualFile"),
@@ -452,7 +459,8 @@ function updateRunBtn(){
   if(!hasKey&&expectedB64&&actualB64){showError("No API key found. Ask Patrick for the setup link.");}
 }
 function fileToBase64(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=()=>j(new Error("Read failed"));rd.readAsDataURL(f);})}
-expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){expectedB64=await fileToBase64(expectedFile.files[0]);expectedName.textContent=expectedFile.files[0].name;expectedZone.classList.add("has-file");}updateRunBtn();});
+function fileToArrayBuffer(f){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.onerror=()=>j(new Error("Read failed"));rd.readAsArrayBuffer(f);})}
+expectedFile.addEventListener("change",async()=>{if(expectedFile.files[0]){const f=expectedFile.files[0];expectedB64=await fileToBase64(f);expectedBytes=await fileToArrayBuffer(f);expectedName.textContent=f.name;expectedZone.classList.add("has-file");}updateRunBtn();});
 actualFile.addEventListener("change",async()=>{if(actualFile.files[0]){actualB64=await fileToBase64(actualFile.files[0]);actualName.textContent=actualFile.files[0].name;actualZone.classList.add("has-file");}updateRunBtn();});
 
 let statusSteps=[];
@@ -575,58 +583,82 @@ Respond ONLY with JSON, no prose, no markdown:
   "note": "string"
 }`;
 
-// PASS A: Transcribe expected PDF -> list of {name, category, expected}
-// Takes the target date from Pass 1 so we can anchor the prompt to ONE specific date.
-function passAPrompt(targetDate){return`Transcribe the EXPECTED inventory PDF into a flat JSON list of items WITH STOCK ON HAND for ONE specific date: ${targetDate}.
+// PASS A (deterministic): Extract items from the typed expected PDF using pdf.js.
+// No AI call. Excel-exported PDFs have real extractable text; we just need to walk
+// the text items per page, group them into rows by Y-coordinate, and parse each row
+// as either "name <quantity>" or a category header.
+async function extractExpectedItems(arrayBuffer){
+  if(typeof pdfjsLib === "undefined"){
+    throw new Error("PDF library not loaded. Reload the page and try again.");
+  }
+  const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+  const items = [];
+  let currentCategory = "OTHER";
 
-═══ CRITICAL: ONE DATE ONLY ═══
-The expected PDF is a snapshot for the SINGLE DATE ${targetDate}. It is NOT a multi-day report. Every quantity you transcribe must be the on-hand count for ${targetDate} specifically.
+  for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
 
-If the PDF appears to show multiple dates or columns:
-- Find the column, section, or block that corresponds to ${targetDate}
-- Read quantities from THAT date only
-- Ignore quantities from any other date
+    // Group text items by row using Y-coordinate (PDF Y is from the bottom).
+    // Items on the same visual line have nearly equal Y values.
+    const rows = new Map();
+    for(const it of content.items){
+      if(!it.str || !it.str.trim()) continue;
+      // Round Y to nearest 2 units to tolerate slight variation
+      const y = Math.round(it.transform[5] / 2) * 2;
+      if(!rows.has(y)) rows.set(y, []);
+      rows.get(y).push({x: it.transform[4], text: it.str});
+    }
 
-If the PDF is a single-date snapshot (one quantity per item with no date columns), every quantity belongs to ${targetDate} - just read each item's quantity directly.
+    // Sort rows top-to-bottom (higher Y = top of page in PDF coords)
+    const sortedYs = Array.from(rows.keys()).sort((a, b) => b - a);
 
-You should produce ONE entry per unique item. Never produce one entry per (item × date) cell. Never list the same item twice.
+    for(const y of sortedYs){
+      // Sort cells in row left-to-right by X
+      const cells = rows.get(y).sort((a, b) => a.x - b.x);
+      const tokens = cells.map(c => c.text.trim()).filter(Boolean);
+      if(tokens.length === 0) continue;
 
-═══ WHAT TO INCLUDE ═══
-ONLY include a row if it has a real positive integer quantity (1 or higher) for ${targetDate}.
+      const joined = tokens.join(" ").trim();
 
-═══ WHAT TO SKIP (do NOT output an entry) ═══
-- Rows where the quantity for ${targetDate} is blank, empty, dash, hyphen, dot, or zero
-- Section/category headers like "INDICA", "SATIVA", "HASH", "THE 100", "EDIBLES" - these label the items below them; never output them as items
-- Page headers, page numbers, dates as item names, the title of the sheet, footer text, totals, subtotals
-- Sub-labels or notes that describe a category but have no individual quantity
-- Duplicate rows: if the same item name appears more than once, output it only ONCE
-- Quantities for any date OTHER than ${targetDate}
+      // Skip pure page furniture / metadata rows
+      if(/^(page|pg)\s*\d+/i.test(joined)) continue;
+      if(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(joined)) continue; // date stamps
+      if(joined.length < 2) continue;
 
-═══ SANITY CHECK ═══
-A typical daily inventory expected sheet has 20-50 real items with positive quantities for a single date. If you find yourself listing more than 60 items, you are either:
-(a) including section headers, blanks, or zeros - go back and remove them
-(b) listing the same item once per date instead of once total - go back and consolidate to one entry per item with only the ${targetDate} quantity
-Either way, stop and review before finalizing your output.
+      // The last token is potentially the quantity. Check if it parses as a positive integer.
+      const lastToken = tokens[tokens.length - 1];
+      const qtyMatch = lastToken.match(/^(\d+)$/);
 
-═══ OUTPUT FORMAT ═══
-Flat array, no wrapping object:
-[{"n":"item name","c":"category","q":positive_integer}]
+      if(qtyMatch){
+        const qty = parseInt(qtyMatch[1], 10);
+        if(qty <= 0) continue; // zero quantities = not on hand, skip
+        const nameTokens = tokens.slice(0, -1);
+        const name = nameTokens.join(" ").replace(/[^\w\s\-./]+/g, " ").replace(/\s+/g, " ").trim();
+        if(!name) continue;
+        // Skip rows that look like totals/subtotals
+        if(/^(total|subtotal|grand total|sum)$/i.test(name)) continue;
+        items.push({n: name, c: currentCategory, q: qty});
+      } else {
+        // No trailing integer → treat as a category header if it's a short, ALL-CAPS-ish word/phrase
+        // Limit to plausible category lines: short, mostly letters, no embedded digits at the end
+        const headerCandidate = joined.replace(/[^\w\s]+/g, " ").replace(/\s+/g, " ").trim();
+        if(headerCandidate.length > 0 && headerCandidate.length <= 30 && /^[A-Z0-9 ]+$/.test(headerCandidate)){
+          currentCategory = headerCandidate.toUpperCase();
+        }
+        // Otherwise just skip — likely a wrapped row, comment, or noise
+      }
+    }
+  }
 
-Field rules:
-- "n" = item name. STRIP all of these characters before writing it: double quotes ("), single quotes ('), backslashes (\\), curly braces, square brackets, line breaks, tabs, em-dashes, smart quotes. Replace each with a single space. Then collapse runs of spaces to one space and trim. ASCII letters, digits, spaces, hyphens, periods, slashes are fine. Keep the name short.
-- "c" = the most recent section/category header above this item, in UPPERCASE ASCII only (e.g. "INDICA", "SATIVA", "HASH"). If no section header exists yet, use "OTHER".
-- "q" = positive integer (1+) representing ${targetDate}'s on-hand count. NEVER 0. NEVER null. NEVER a string. If you cannot read a clear positive integer for ${targetDate}, skip the row entirely.
-
-CRITICAL JSON rules:
-- Output ONLY the JSON array. No prose, no markdown, no code fences, no leading/trailing text.
-- All strings double-quoted. No trailing commas.
-- Each entry syntactically complete. If unsure about a row, skip it entirely.
-
-Example output (for date 2026-05-04):
-[
-{"n":"Cherry Cheesecake","c":"INDICA","q":1},
-{"n":"Death Rockstar","c":"INDICA","q":3}
-]`;}
+  // Dedupe by normalized name (last write wins on duplicates — usually the totals match anyway)
+  const seen = new Map();
+  for(const it of items){
+    const key = it.n.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    if(!seen.has(key)) seen.set(key, it);
+  }
+  return Array.from(seen.values());
+}
 
 // PASS B: For a given list of expected item names, look each one up on the actual sheet
 // and return its value in column N. Bounded output = no truncation, no overshoot.
@@ -741,20 +773,18 @@ runBtn.addEventListener("click",async()=>{
     confirmBox.classList.remove("visible");
     if(!confirmed){addStatus("Aborted","done");runBtn.disabled=false;return;}
 
-    // Pass A: transcribe expected PDF -> [{n, c, q}]
-    const sA=addStatus("Pass A: transcribing expected sheet");showLoading("Reading expected items");
-    const passAContent=[{type:"text",text:"EXPECTED inventory PDF:"},{type:"document",source:{type:"base64",media_type:"application/pdf",data:expectedB64}},{type:"text",text:passAPrompt(pass1Result.target_date)}];
+    // Pass A: extract items from typed expected PDF using pdf.js (NO AI CALL)
+    const sA=addStatus("Pass A: extracting expected items");showLoading("Reading expected items");
     let expectedList=null;
-    for(let attempt=1;attempt<=2;attempt++){
-      try{
-        const pA=await callClaude(apiKey,[{role:"user",content:passAContent}],4000,onRateWait);
-        expectedList=parseJSON(extractText(pA));
-        if(!Array.isArray(expectedList)) throw new Error("Pass A did not return an array");
-        break;
-      }catch(parseErr){
-        if(attempt===1){updateStatus(sA,"running");addStatus("Retrying Pass A - brief pause");showLoading("Waiting before retry");await sleep(15000);showLoading("Retrying");}
-        else{throw new Error("Pass A failed: "+parseErr.message);}
+    try{
+      expectedList = await extractExpectedItems(expectedBytes);
+      if(!Array.isArray(expectedList) || expectedList.length === 0){
+        throw new Error("No items found in expected PDF. Is it an Excel-exported typed PDF?");
       }
+      console.log("Pass A extracted", expectedList.length, "items:", expectedList);
+    }catch(err){
+      updateStatus(sA,"error");
+      throw new Error("Pass A failed: "+err.message);
     }
     updateStatus(sA,"done");
 
@@ -807,7 +837,7 @@ runBtn.addEventListener("click",async()=>{
 });
 
 resetBtn.addEventListener("click",()=>{
-  expectedB64=null;actualB64=null;pass1Result=null;expectedFile.value="";actualFile.value="";
+  expectedB64=null;actualB64=null;expectedBytes=null;pass1Result=null;expectedFile.value="";actualFile.value="";
   expectedName.textContent="";actualName.textContent="";expectedZone.classList.remove("has-file");actualZone.classList.remove("has-file");
   statusSteps=[];statusBar.innerHTML="";statusBar.classList.remove("visible");confirmBox.classList.remove("visible");
   errorBox.classList.remove("visible");results.classList.remove("visible");resetBtn.classList.remove("visible");updateRunBtn();
