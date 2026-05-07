@@ -282,7 +282,37 @@ function renderStatus() {
   statusBar.classList.add("visible");
   statusBar.innerHTML = statusSteps.map(s => `<div class="status-step ${s.state}">${s.text}</div>`).join("");
 }
-function showError(m) { errorBox.textContent = m; errorBox.classList.add("visible"); }
+let lastRawOutput = null; // Captured for diagnostic display when parsing fails
+
+function showError(m) {
+  // Build error UI. If we have a raw model output captured, attach it in a
+  // textarea so the user can copy it without opening DevTools.
+  errorBox.innerHTML = "";
+  const msgEl = document.createElement("div");
+  msgEl.textContent = m;
+  errorBox.appendChild(msgEl);
+  if (lastRawOutput) {
+    const hint = document.createElement("div");
+    hint.style.cssText = "margin-top:10px;font-size:12px;color:var(--text-muted);";
+    hint.textContent = "Raw model output captured below — copy and paste it back to debug.";
+    errorBox.appendChild(hint);
+    const ta = document.createElement("textarea");
+    ta.readOnly = true;
+    ta.value = lastRawOutput;
+    ta.style.cssText = "margin-top:8px;width:100%;height:160px;font-family:Consolas,monospace;font-size:11px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:8px;resize:vertical;";
+    errorBox.appendChild(ta);
+    const copyDebugBtn = document.createElement("button");
+    copyDebugBtn.textContent = "Copy raw output";
+    copyDebugBtn.style.cssText = "margin-top:8px;padding:6px 14px;background:var(--surface);color:var(--accent);border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;";
+    copyDebugBtn.onclick = async () => {
+      await navigator.clipboard.writeText(lastRawOutput);
+      copyDebugBtn.textContent = "Copied!";
+      setTimeout(() => { copyDebugBtn.textContent = "Copy raw output"; }, 1500);
+    };
+    errorBox.appendChild(copyDebugBtn);
+  }
+  errorBox.classList.add("visible");
+}
 function showLoading(msg) { loadingText.textContent = (msg || "Checking inventory") + "..."; loadingOverlay.classList.add("visible"); }
 function hideLoading() { loadingOverlay.classList.remove("visible"); }
 
@@ -301,22 +331,23 @@ async function extractPage1AsPng(arrayBuffer) {
 
 // JSON parser — mirrors Python parse_json_response fallback chain.
 function parseJSONResponse(raw) {
+  lastRawOutput = raw; // capture for diagnostic display on failure
   let text = raw.trim();
   if (text.startsWith("```")) {
     text = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
   }
-  try { return JSON.parse(text); } catch {}
+  try { const r = JSON.parse(text); lastRawOutput = null; return r; } catch {}
   let fixed = text.replace(/,(\s*[}\]])/g, "$1");
-  try { return JSON.parse(fixed); } catch {}
+  try { const r = JSON.parse(fixed); lastRawOutput = null; return r; } catch {}
   fixed = fixed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
-  try { return JSON.parse(fixed); } catch {}
+  try { const r = JSON.parse(fixed); lastRawOutput = null; return r; } catch {}
   let close = fixed;
   const opens = (close.match(/\[/g) || []).length, closes = (close.match(/\]/g) || []).length;
   const ob = (close.match(/\{/g) || []).length, cb = (close.match(/\}/g) || []).length;
   close = close.replace(/,\s*"[^"]*"?\s*:?\s*"?[^"]*$/, "").replace(/,\s*$/, "");
   for (let i = 0; i < opens - closes; i++) close += "]";
   for (let i = 0; i < ob - cb; i++) close += "}";
-  try { return JSON.parse(close); } catch (e) {
+  try { const r = JSON.parse(close); lastRawOutput = null; return r; } catch (e) {
     console.error("JSON parse failed. Raw:", raw);
     throw new Error("JSON Parse error: " + e.message);
   }
@@ -445,9 +476,9 @@ function formatWhatsApp(report) {
   } catch {}
   const total = s.total_items || 0;
   const disc = s.discrepancies || 0;
-  if (disc === 0) return `Inventory Check — ${datePretty}\nAll items match.`;
+  if (disc === 0) return `Inventory Check — ${datePretty}\nAll ${total} items match.`;
 
-  const lines = [`Inventory Check — ${datePretty}`, `${disc} discrepancies`, ""];
+  const lines = [`Inventory Check — ${datePretty}`, `${disc} discrepancies out of ${total} items`, ""];
   const byCategory = {}, categoryOrder = [];
   for (const item of (report.items || [])) {
     if (item.status === "match") continue;
@@ -530,6 +561,7 @@ runBtn.addEventListener("click", async () => {
   results.classList.remove("visible");
   resetBtn.classList.remove("visible");
   runBtn.disabled = true;
+  lastRawOutput = null;
 
   try {
     // PASS 1
