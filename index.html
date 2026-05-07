@@ -679,7 +679,7 @@ async function analyzeQuote(quote) {
       headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
       body: JSON.stringify({
         model: MODEL, max_tokens: 300,
-        messages: [{ role: "user", content: `"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Then give 2 real-world examples that show this idea in action - from everyday life, work, sports, business, anything relatable. Keep the whole thing under 5 sentences. No fancy words, no fluff. Do NOT comment on who said it. Plain text only.` }],
+        messages: [{ role: "user", content: `"${quote}"\n\nBreak this quote down in plain, simple language. What is it really saying? Keep it under 3 sentences. No fancy words, no fluff. Do NOT comment on who said it. Plain text only.` }],
       }),
     });
     if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e?.error?.message || "API error"); }
